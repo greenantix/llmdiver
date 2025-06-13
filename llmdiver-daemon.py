@@ -94,22 +94,21 @@ class GitAutomation:
         with self.lock:
             try:
                 # Check if this is LLMdiver's own repository - if so, only commit project files
-                repo_path = Path(self.repo_config['path'])
-                is_llmdiver_repo = repo_path.name == 'LLMdiver'
+                is_self_analysis = self.repo_config['name'] == 'LLMdiver'
                 
-                if is_llmdiver_repo:
+                if is_self_analysis:
                     # For LLMdiver repo, only commit non-LLMdiver files (actual project files)
                     changed_files = self._get_smart_changed_files()
                     if not changed_files:
-                        logging.info("Smart commit: No non-LLMdiver files changed, skipping commit")
+                        logging.info("Smart Commit: No source file changes detected. Skipping commit.")
                         return
                     
                     # Stage only the actual project files, not analysis outputs
-                    logging.info(f"Smart commit: Staging {len(changed_files)} project files: {changed_files}")
+                    logging.info(f"Smart Commit: Staging {len(changed_files)} changed source files.")
                     self.repo.index.add(changed_files)
                     
                     # Generate commit message for actual code changes
-                    commit_message = self._generate_smart_commit_message(changed_files, analysis_data)
+                    commit_message = f"🤖 LLMdiver: Automated commit for {len(changed_files)} file(s)."
                     
                     # Commit and push for LLMdiver repo
                     self.repo.index.commit(commit_message)
@@ -130,7 +129,7 @@ class GitAutomation:
                     if doc_path and doc_path.exists():
                         files_to_add.append(str(doc_path))
 
-                    logging.info(f"Staging files for commit: {files_to_add}")
+                    logging.info(f"Standard Commit: Staging {len(files_to_add)} analysis artifacts.")
                     self.repo.index.add(files_to_add)
 
                     # 3. Generate a detailed commit message
@@ -166,56 +165,21 @@ class GitAutomation:
         
         return changed_files
     
-    def _is_llmdiver_internal_file(self, file_path):
-        """Check if a file is internal to LLMdiver (should be ignored in smart commits)"""
+    def _is_llmdiver_internal_file(self, file_path: str) -> bool:
+        """Check if a file is internal to LLMdiver's operations."""
         llmdiver_patterns = [
             '.llmdiver/',
             'llmdiver_daemon.log',
             'llmdiver.pid',
             'metrics/',
             'audits/',
-            # Analysis output files
-            'enhanced_analysis_',
             'analysis_data_',
-            'repomix.md',
-            # LLMdiver scripts and configs
-            'llmdiver-daemon.py',
-            'llmdiver_gui.py',
-            'llmdiver_monitor.py',
-            'config/llmdiver.json',
-            'start_llmdiver.sh',
-            'test_llmdiver.sh',
-            # Action plans that are completed
+            'enhanced_analysis_',
             'Action_Plan',
-            'test_indexing.py',
             'indexing_test/'
         ]
-        
-        for pattern in llmdiver_patterns:
-            if pattern in file_path:
-                return True
-        return False
+        return any(pattern in file_path for pattern in llmdiver_patterns)
     
-    def _generate_smart_commit_message(self, changed_files, analysis_data):
-        """Generate commit message for actual project files (not LLMdiver analysis)"""
-        file_count = len(changed_files)
-        file_types = set()
-        
-        for file_path in changed_files:
-            if file_path.endswith('.py'):
-                file_types.add('Python')
-            elif file_path.endswith(('.js', '.ts')):
-                file_types.add('JavaScript/TypeScript')
-            elif file_path.endswith('.sh'):
-                file_types.add('Shell')
-            elif file_path.endswith('.md'):
-                file_types.add('Documentation')
-            else:
-                file_types.add('Other')
-        
-        file_type_str = ', '.join(sorted(file_types))
-        
-        return f"🤖 LLMdiver: Update codebase\n\nModified {file_count} files: {file_type_str}\n\n🤖 Generated with [Claude Code](https://claude.ai/code)\n\nCo-Authored-By: Claude <noreply@anthropic.com>"
 
     def commit_and_push(self, changed_files, analysis_result):
         """Legacy method for backwards compatibility"""
