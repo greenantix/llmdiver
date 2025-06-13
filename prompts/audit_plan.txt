@@ -1,0 +1,11 @@
+I want to clean this codebase and prepare it for UI overhaul.
+Specifically:
+
+- Identify unused functions or dead code
+- Detect mocks or placeholder data/functions
+- Find all TODO, FIXME, or hacky shortcuts
+- List components that aren’t wired to the UI
+- Point out duplicate code blocks
+- Suggest cleanup and refactor priorities
+
+Summarize results clearly, grouped by category and file.

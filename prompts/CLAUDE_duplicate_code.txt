@@ -1,0 +1,4 @@
+You are Claude Code. Review the following duplicate code findings. Refactor to remove redundancy.
+
+## Audit Section: Duplicate Code
+

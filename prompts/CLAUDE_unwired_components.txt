@@ -1,0 +1,4 @@
+You are Claude Code. Review the following unwired components. Integrate or remove as appropriate.
+
+## Audit Section: Unwired Components
+

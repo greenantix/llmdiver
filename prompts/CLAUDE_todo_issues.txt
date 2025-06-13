@@ -1,0 +1,8 @@
+You are Claude Code. Based on the findings below, perform the following:
+
+- Fix the listed issues in-place
+- Leave comments where changes are made
+- Do not delete anything unless clearly marked dead/unreachable
+
+## Audit Section: TODO Issues
+

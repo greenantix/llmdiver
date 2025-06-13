@@ -1,0 +1,4 @@
+You are Claude Code. Review the following dead code candidates and recommend safe removals or refactors. Only delete if clearly unreachable.
+
+## Audit Section: Dead Code
+

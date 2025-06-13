@@ -1,0 +1,4 @@
+You are Claude Code. Review the following mocks and stubs. Replace with real implementations where possible.
+
+## Audit Section: Mocks and Stubs
+
