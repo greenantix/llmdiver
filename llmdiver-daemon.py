@@ -1303,6 +1303,34 @@ class RepomixProcessor:
             logging.error(f"Failed to run repomix analysis: {e}")
             return None
 
+    def run_repomix_diff_analysis(self, repo_path: str) -> str:
+        """Runs repomix using --include-diffs to get only changed content."""
+        try:
+            output_dir = Path(repo_path) / '.llmdiver'
+            output_dir.mkdir(exist_ok=True)
+            diff_output_file = output_dir / 'repomix_diff.md'
+
+            # This command is much faster as it only processes the git diff
+            cmd = [
+                'repomix', repo_path,
+                '--output', str(diff_output_file),
+                '--include-diffs',
+                '--style', 'markdown'
+            ]
+
+            logging.info(f"Running incremental diff analysis with command: {' '.join(cmd)}")
+            result = subprocess.run(cmd, check=True, capture_output=True, text=True)
+
+            if result.returncode != 0:
+                logging.error(f"Repomix diff analysis failed: {result.stderr}")
+                return None
+
+            with open(diff_output_file) as f:
+                return f.read()
+        except Exception as e:
+            logging.error(f"Failed to run repomix diff analysis: {e}", exc_info=True)
+            return None
+
     def _extract_structured_findings(self, analysis_text: str) -> Dict: #
         """Extract structured findings from AI analysis text for JSON output"""
         findings = {
@@ -1396,13 +1424,15 @@ class RepomixProcessor:
         logging.info(f"--- Starting Enhanced Analysis for {repo_config['name']} ---")
 
         try:
-            # Step 1: Run repomix
-            logging.info("Step 1: Running repomix to generate repository summary...")
-            summary = self.run_repomix_analysis(repo_config["path"])
-            if not summary:
-                logging.error("ANALYSIS HALTED: Repomix failed to generate a summary.")
-                return
-            logging.info(f"Repomix summary generated ({len(summary)} characters).")
+            # Step 1: Run repomix to generate an incremental repository summary
+            logging.info("Step 1: Running repomix --include-diffs to get changes...")
+            summary = self.run_repomix_diff_analysis(repo_config["path"])
+            
+            if not summary or "No changes detected" in summary:
+                logging.info("No file changes detected by git diff. Skipping analysis cycle.")
+                return  # Exit the analysis cycle cleanly
+            
+            logging.info(f"Repomix diff summary generated ({len(summary)} characters).")
 
             # Step 2: Preprocess and index code
             logging.info("Step 2: Preprocessing code and updating semantic index...")
