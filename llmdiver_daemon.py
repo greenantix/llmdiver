@@ -3,7 +3,7 @@
 LLMdiver Background Daemon
 Monitors repositories, runs analysis, and automates git operations
 """
-# Test trigger for LLM analysis
+# Test trigger for enhanced LLM analysis with improved prompts
 
 import os
 import sys
@@ -147,23 +147,40 @@ class LLMStudioClient:
 
     def analyze_repo_summary(self, summary_text: str) -> str:
         """Send repo summary to LM Studio for analysis with auto-chunking"""
-        system_prompt = """You are an expert code auditor. Analyze the repository summary and identify:
+        system_prompt = """You are a principal software architect and security expert conducting a comprehensive code review for maintainability, security, and performance. Your analysis will be used by development teams to prioritize technical improvements.
 
-1. TODO/FIXME items that need attention
-2. Mock/stub implementations that should be replaced with real code
-3. Dead or unused code that can be removed
-4. Infinite loops or performance issues
-5. Missing connections between components
+**ANALYSIS PRIORITY FRAMEWORK:**
+- CRITICAL: Security vulnerabilities, data leaks, system crashes
+- HIGH: Performance bottlenecks, architectural violations, breaking changes
+- MEDIUM: Code maintainability issues, technical debt, missing tests
+- LOW: Style inconsistencies, minor optimizations, documentation gaps
 
-Format your response as:
-## Critical Issues
-## TODOs and Tech Debt  
-## Mock/Stub Implementations
-## Dead Code Candidates
-## Performance Concerns
-## Architectural Improvements
+**REQUIRED OUTPUT FORMAT:**
 
-Be specific and actionable in your recommendations."""
+## Executive Summary
+[3-4 sentence overview of codebase health, most critical findings, and recommended immediate actions]
+
+## Critical Issues (Priority: CRITICAL)
+[Security vulnerabilities, potential crashes, data exposure risks - include code snippets and file:line references]
+
+## High Priority Concerns (Priority: HIGH)  
+[Performance bottlenecks, architectural problems, breaking changes - include specific examples]
+
+## Technical Debt & TODOs (Priority: MEDIUM)
+[TODO/FIXME items, mock implementations, maintainability issues - provide file locations]
+
+## Dead Code & Optimization (Priority: LOW)
+[Unused functions, redundant code, minor optimizations - include removal suggestions]
+
+## Actionable Recommendations
+[Specific, prioritized action items with estimated impact and effort]
+
+**ANALYSIS REQUIREMENTS:**
+- Provide file:line references for all findings
+- Include relevant code snippets for context
+- Prioritize findings by business impact and security risk
+- Focus on actionable recommendations, not theoretical issues
+- Consider the project's architecture and technology stack"""
 
         # Check if chunking is enabled and needed
         enable_chunking = self.config["llm_integration"].get("enable_chunking", False)
@@ -709,19 +726,31 @@ class LLMdiverDaemon:
         if not changes:
             return ""
         
-        analysis_text = "## Manifest Analysis\n\n"
+        analysis_text = "## Dependency Change Analysis\n\n"
         
         for change in changes:
             if change["type"] == "modified":
-                analysis_text += f"### Modified: {change['file']}\n"
+                analysis_text += f"### 🔄 Modified: {change['file']}\n"
                 if change["added_deps"]:
-                    analysis_text += f"**Added dependencies:** {', '.join(change['added_deps'])}\n"
+                    analysis_text += f"**➕ Added dependencies ({len(change['added_deps'])}):** {', '.join(change['added_deps'])}\n"
+                    analysis_text += f"   *Security Assessment Required*: Review new packages for vulnerabilities and licensing\n"
                 if change["removed_deps"]:
-                    analysis_text += f"**Removed dependencies:** {', '.join(change['removed_deps'])}\n"
+                    analysis_text += f"**➖ Removed dependencies ({len(change['removed_deps'])}):** {', '.join(change['removed_deps'])}\n"
+                    analysis_text += f"   *Impact Assessment Required*: Check for breaking changes and unused imports\n"
                 analysis_text += "\n"
             elif change["type"] == "new":
-                analysis_text += f"### New manifest: {change['file']}\n"
-                analysis_text += f"**Dependencies:** {', '.join(change['dependencies'])}\n\n"
+                analysis_text += f"### 🆕 New manifest: {change['file']}\n"
+                analysis_text += f"**Total dependencies ({len(change['dependencies'])}):** {', '.join(change['dependencies'])}\n"
+                analysis_text += f"   *Full Security Review Required*: New dependency ecosystem introduced\n\n"
+        
+        # Add analysis instructions for the LLM
+        if changes:
+            analysis_text += "### 🎯 LLM Analysis Focus Areas:\n"
+            analysis_text += "- **Security**: Check for known vulnerabilities in added packages\n"
+            analysis_text += "- **Compatibility**: Assess version conflicts and breaking changes\n"
+            analysis_text += "- **Necessity**: Evaluate if dependencies are actually needed\n"
+            analysis_text += "- **Alternatives**: Suggest lighter or more secure alternatives where applicable\n"
+            analysis_text += "- **Impact**: Assess bundle size, performance, and maintenance implications\n\n"
         
         return analysis_text
     
@@ -745,15 +774,23 @@ class LLMdiverDaemon:
             # Enhanced prompt with manifest and project context
             enhanced_summary = f"""# Repository Analysis: {repo_config['name']}
 
-## Project Information
+## Project Context
 - Primary Language: {project_info['primary_language']}
 - Framework: {project_info['framework']}
-- Manifests: {len(project_info['manifests'])}
+- Manifest Files: {len(project_info['manifests'])}
+- Project Type: {'Multi-language' if len(project_info['manifests']) > 1 else project_info['primary_language']}
 
 {manifest_analysis}
 
 ## Code Analysis
 {summary}
+
+## Analysis Instructions
+When analyzing this codebase, pay special attention to:
+1. **Dependency Security**: If manifest changes detected, assess security implications of new/removed packages
+2. **Language-Specific Patterns**: Apply {project_info['primary_language']}-specific best practices and common issues
+3. **Cross-Project Context**: Consider how this project fits within the broader AI workspace ecosystem
+4. **Framework Alignment**: Evaluate code against {project_info['framework']} architectural patterns and conventions
 """
             
             # Send to LLM for analysis

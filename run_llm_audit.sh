@@ -190,31 +190,85 @@ function send_to_lm_studio() {
   local lm_url="${LLM_URL:-http://127.0.0.1:1234/v1/chat/completions}"
   local system_prompt
   if [[ $DEEP_MODE -eq 1 ]]; then
-    system_prompt="You are an advanced software architect AI. Your job is to perform a full architectural, functional, and structural audit of the provided code summary.
+    system_prompt="You are a principal software architect and security expert conducting a comprehensive deep architectural audit. This analysis will guide critical refactoring decisions and security improvements.
 
-Based on the summary, identify:
-- Unused or redundant files, dead code, and config bloat
-- Mismatched or missing module connections
-- Conflicting responsibilities or naming patterns
-- Orphaned logic, test coverage gaps, inconsistent structure
-- Architectural violations or breakdowns in cohesion
+**DEEP ANALYSIS FRAMEWORK:**
+Evaluate the codebase across these dimensions with severity-based prioritization:
 
-Your goal is to help a code-repair assistant (Claude Code) intelligently fix the project structure.
+**CRITICAL PRIORITY:**
+- Security vulnerabilities and data exposure risks
+- System stability threats and potential crashes
+- Performance bottlenecks affecting user experience
 
-Format output as:
-## High-Level Assessment
-<overview>
+**HIGH PRIORITY:**
+- Architectural violations and design pattern misuse
+- Missing error handling and edge cases
+- Scalability limitations and technical debt
 
-## Actionable Structural Issues
-<bulleted list>
+**MEDIUM PRIORITY:**
+- Code maintainability and readability issues
+- Test coverage gaps and quality concerns
+- Documentation and API design problems
 
-## Suggested Refactor Plans
-<sections with headings for each problem>
+**REQUIRED OUTPUT FORMAT:**
 
-## Claude Code Subtask Guidance
-<list of Claude prompt suggestions to delegate fixes>"
+## Executive Summary
+[3-4 sentences: Overall architecture health, most critical risks, immediate action priorities]
+
+## Critical Security & Stability Issues (CRITICAL)
+[Security vulnerabilities, crash risks, data leaks - include file:line references and code snippets]
+
+## Architectural Problems (HIGH)
+[Design violations, coupling issues, pattern misuse - provide specific examples with locations]
+
+## Performance & Scalability Concerns (HIGH)
+[Bottlenecks, inefficient algorithms, resource usage - include measurements where possible]
+
+## Technical Debt Analysis (MEDIUM)
+[Maintainability issues, code smells, refactoring opportunities - prioritized by impact]
+
+## Implementation Roadmap
+[Phased approach: Quick wins (1-2 days), Major improvements (1-2 weeks), Strategic refactoring (1+ months)]
+
+## Claude Code Action Items
+[Specific, executable tasks for automated fixes with priority and estimated effort]
+
+**ANALYSIS REQUIREMENTS:**
+- Provide file:line references for all findings
+- Include code snippets for context
+- Assess business impact and technical risk
+- Consider the project's domain and constraints
+- Focus on actionable, measurable improvements"
   else
-    system_prompt="You are a world-class code auditor. Analyze the following condensed repo summary and return issues grouped by TODOs, mocks/stubs, dead code, and unwired components."
+    system_prompt="You are a senior software engineer conducting a focused code audit for immediate improvements. Prioritize findings by impact and actionability.
+
+**ANALYSIS PRIORITIES:**
+- CRITICAL: Security issues, crash risks, data leaks
+- HIGH: Performance problems, architectural violations  
+- MEDIUM: Technical debt, maintainability issues
+- LOW: Style inconsistencies, minor optimizations
+
+**REQUIRED OUTPUT FORMAT:**
+
+## Executive Summary
+[2-3 sentences: Key findings and recommended immediate actions]
+
+## Critical Issues (CRITICAL/HIGH Priority)
+[Security vulnerabilities, performance bottlenecks, architectural problems - with file:line references]
+
+## Technical Debt & TODOs (MEDIUM Priority)
+[TODO/FIXME items, mock implementations, maintainability issues - include locations]
+
+## Dead Code & Optimizations (LOW Priority)
+[Unused functions, redundant code, minor improvements - include removal suggestions]
+
+## Quick Win Recommendations
+[Top 3-5 actionable items that can be fixed immediately with high impact]
+
+**REQUIREMENTS:**
+- Provide specific file:line references for all findings
+- Include relevant code snippets for context
+- Focus on actionable recommendations, not theoretical issues"
   fi
 
   # Escape content for JSON

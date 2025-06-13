@@ -1,0 +1,14 @@
+[Unit]
+Description=LLMdiver Code Analysis Daemon
+After=network.target
+
+[Service]
+Type=simple
+User=greenantix
+WorkingDirectory=/home/greenantix/AI/LLMdiver
+ExecStart=/usr/bin/python3 llmdiver-daemon.py
+Restart=always
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target
