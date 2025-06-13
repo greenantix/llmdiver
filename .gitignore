@@ -76,3 +76,6 @@ Thumbs.db
 # Git
 *.orig
 truct",
+models/all-MiniLM-L6-v2-Q8_0.gguf
+models/bge-small-en-v1.5-q8_0.gguf
+models/nomic-embed-text-v1.5.f16.gguf

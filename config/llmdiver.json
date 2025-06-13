@@ -82,5 +82,14 @@
     "auto_discover": true,
     "discovery_patterns": [".git", "package.json", "requirements.txt"],
     "exclude_paths": ["node_modules", "__pycache__", ".venv", "venv", "target"]
+  },
+  "semantic_search": {
+    "enabled": true,
+    "embedding_model": "llama_cpp",
+    "model_path": "/home/greenantix/AI/LLMdiver/models/all-MiniLM-L6-v2-Q8_0.gguf",
+    "model_name": "all-MiniLM-L6-v2",
+    "similarity_threshold": 0.3,
+    "max_similar_blocks": 5,
+    "comment": "Available models: all-MiniLM-L6-v2-Q8_0.gguf, bge-small-en-v1.5-q8_0.gguf, nomic-embed-text-v1.5.f16.gguf"
   }
 }
