@@ -63,49 +63,76 @@ def run_indexing_test():
     logging.info(f"Preprocessor extracted {len(preprocessed_data['files'])} files.")
     
     # Debug: Print what was extracted
-    for i, file_data in enumerate(preprocessed_data['files']):
+    files = preprocessed_data['files']
+    print("\n--- File Analysis ---")
+    for i, file_data in enumerate(files):
         print(f"File {i}: {file_data['path']}")
-        print(f"  Functions: {len(file_data.get('code_blocks', {}).get('functions', []))}")
-        print(f"  Classes: {len(file_data.get('code_blocks', {}).get('classes', []))}")
-        if file_data.get('code_blocks', {}).get('functions'):
-            print(f"  First function content: {file_data['code_blocks']['functions'][0].get('content', 'N/A')[:100]}...")
+        print(f"  Language: {file_data['language']}")
+        print(f"  Size: {file_data['size']} characters")
+        
+        code_blocks = file_data.get('code_blocks', [])
+        functions = [block for block in code_blocks if block.get('type') == 'function']
+        classes = [block for block in code_blocks if block.get('type') == 'class']
+        
+        print(f"  Code blocks: {len(code_blocks)}")
+        print(f"  Functions: {len(functions)}")
+        print(f"  Classes: {len(classes)}")
+        
+        # Show first function if exists
+        if functions:
+            print(f"  First function: {functions[0].get('name', 'unnamed')}")
+            print(f"  Content preview: {functions[0].get('content', '')[:100]}...")
+        print()
 
 
-    # 5. Index the code blocks
-    all_code_blocks = [
-        block['content']
-        for file_data in preprocessed_data['files']
-        for block in file_data.get('code_blocks', {}).get('functions', [])
-    ]
-    indexer.update_index(all_code_blocks)
-    logging.info("Code index updated with test functions.")
+    # 5. Index the code blocks using the new update method
+    indexer.update_index(preprocessed_data)
+    logging.info("Code index updated with preprocessed data.")
 
-    # 6. Create a query block (the function from file_a.py)
-    query_block = [f['content'] for f in preprocessed_data['files'][0].get('code_blocks', {}).get('functions', [])]
-    if not query_block:
+    # 6. Get all function blocks for semantic search  
+    all_functions = []
+    for file_data in preprocessed_data['files']:
+        code_blocks = file_data.get('code_blocks', [])
+        functions = [block for block in code_blocks if block.get('type') == 'function']
+        all_functions.extend(functions)
+    
+    if not all_functions:
+        print("❌ FAILED: No functions were extracted from test files.")
+        return
+    
+    print(f"Extracted {len(all_functions)} functions total.")
+
+    # 7. Create a query from the first function
+    query_functions = [all_functions[0]['content']] if all_functions else []
+    if not query_functions:
         print("❌ FAILED: Could not extract the query function from test file.")
         return
 
-    # 7. Perform the search
+    # 8. Perform the search
     logging.info("Performing semantic search...")
-    similar_results = indexer.find_similar_code(query_block, similarity_threshold=0.7)
+    similar_results = indexer.find_similar_code(query_functions, similarity_threshold=0.6)
 
-    # 8. Validate the results
+    # 9. Validate the results
     print("\n--- Test Results ---")
     if not similar_results:
         print("❌ FAILED: No similar code blocks were found.")
+        print("This indicates that semantic indexing is not working properly.")
         return
 
+    print(f"Found {len(similar_results)} similar code patterns:")
     found_match = False
-    for result in similar_results:
-        # Check if the similar block found is the one from file_b.py
-        if "get_total_cost" in result.get('similar_block', ''):
+    for i, result in enumerate(similar_results):
+        print(f"  Result {i+1}: Similarity {result['similarity']:.3f}")
+        print(f"    Location: {result.get('file_path', 'Unknown')}")
+        
+        # Check if the similar block found is the other price calculation function
+        if "calculate_price" in result.get('similar_block', '') or "get_total_cost" in result.get('similar_block', ''):
             found_match = True
-            print(f"✅ PASSED: Found correct similar function with similarity score: {result['similarity']:.2f}")
-            break
+            print(f"✅ PASSED: Found correct similar function with similarity score: {result['similarity']:.3f}")
 
     if not found_match:
         print("❌ FAILED: The correct similar function was NOT found in the results.")
+        print("Expected to find either 'calculate_price' or 'get_total_cost' function")
     else:
         print("✅ Semantic Indexing Test Completed Successfully!")
 

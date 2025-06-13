@@ -93,30 +93,129 @@ class GitAutomation:
 
         with self.lock:
             try:
-                # 1. Update the core documentation from the analysis results
-                doc_path = self.update_documentation(analysis_data)
+                # Check if this is LLMdiver's own repository - if so, only commit project files
+                repo_path = Path(self.repo_config['path'])
+                is_llmdiver_repo = repo_path.name == 'LLMdiver'
+                
+                if is_llmdiver_repo:
+                    # For LLMdiver repo, only commit non-LLMdiver files (actual project files)
+                    changed_files = self._get_smart_changed_files()
+                    if not changed_files:
+                        logging.info("Smart commit: No non-LLMdiver files changed, skipping commit")
+                        return
+                    
+                    # Stage only the actual project files, not analysis outputs
+                    logging.info(f"Smart commit: Staging {len(changed_files)} project files: {changed_files}")
+                    self.repo.index.add(changed_files)
+                    
+                    # Generate commit message for actual code changes
+                    commit_message = self._generate_smart_commit_message(changed_files, analysis_data)
+                    
+                    # Commit and push for LLMdiver repo
+                    self.repo.index.commit(commit_message)
+                    logging.info(f"✅ Smart commit created: {commit_message.splitlines()[0]}")
+                    
+                    if self.config.get('auto_push', False) and self.repo_config.get('auto_push', False):
+                        logging.info("Attempting to push to remote...")
+                        self.repo.remote().push()
+                        logging.info("✅ Successfully pushed changes to remote.")
+                    
+                else:
+                    # For other repos, use the standard approach
+                    # 1. Update the core documentation from the analysis results
+                    doc_path = self.update_documentation(analysis_data)
 
-                # 2. Stage the analysis files and the updated documentation
-                files_to_add = [str(analysis_file_path), str(json_analysis_path)]
-                if doc_path and doc_path.exists():
-                    files_to_add.append(str(doc_path))
+                    # 2. Stage the analysis files and the updated documentation
+                    files_to_add = [str(analysis_file_path), str(json_analysis_path)]
+                    if doc_path and doc_path.exists():
+                        files_to_add.append(str(doc_path))
 
-                logging.info(f"Staging files for commit: {files_to_add}")
-                self.repo.index.add(files_to_add)
+                    logging.info(f"Staging files for commit: {files_to_add}")
+                    self.repo.index.add(files_to_add)
 
-                # 3. Generate a detailed commit message
-                commit_message = self.generate_commit_message_from_data(analysis_data)
-                self.repo.index.commit(commit_message)
-                logging.info(f"✅ Successfully created commit: {commit_message.splitlines()[0]}")
+                    # 3. Generate a detailed commit message
+                    commit_message = self.generate_commit_message_from_data(analysis_data)
+                    
+                    # Commit and push for other repos
+                    self.repo.index.commit(commit_message)
+                    logging.info(f"✅ Successfully created commit: {commit_message.splitlines()[0]}")
 
-                # 4. Push if configured
-                if self.config.get('auto_push', False) and self.repo_config.get('auto_push', False):
-                    logging.info("Attempting to push to remote...")
-                    self.repo.remote().push()
-                    logging.info("✅ Successfully pushed changes to remote.")
+                    if self.config.get('auto_push', False) and self.repo_config.get('auto_push', False):
+                        logging.info("Attempting to push to remote...")
+                        self.repo.remote().push()
+                        logging.info("✅ Successfully pushed changes to remote.")
 
             except Exception as e:
                 logging.error(f"❌ Git automation failed: {e}", exc_info=True)
+
+    def _get_smart_changed_files(self):
+        """Get changed files excluding LLMdiver's own files"""
+        changed_files = []
+        
+        # Get all changed files
+        for item in self.repo.index.diff(None):
+            file_path = item.a_path
+            # Skip LLMdiver internal files
+            if not self._is_llmdiver_internal_file(file_path):
+                changed_files.append(file_path)
+        
+        # Also check untracked files
+        for untracked in self.repo.untracked_files:
+            if not self._is_llmdiver_internal_file(untracked):
+                changed_files.append(untracked)
+        
+        return changed_files
+    
+    def _is_llmdiver_internal_file(self, file_path):
+        """Check if a file is internal to LLMdiver (should be ignored in smart commits)"""
+        llmdiver_patterns = [
+            '.llmdiver/',
+            'llmdiver_daemon.log',
+            'llmdiver.pid',
+            'metrics/',
+            'audits/',
+            # Analysis output files
+            'enhanced_analysis_',
+            'analysis_data_',
+            'repomix.md',
+            # LLMdiver scripts and configs
+            'llmdiver-daemon.py',
+            'llmdiver_gui.py',
+            'llmdiver_monitor.py',
+            'config/llmdiver.json',
+            'start_llmdiver.sh',
+            'test_llmdiver.sh',
+            # Action plans that are completed
+            'Action_Plan',
+            'test_indexing.py',
+            'indexing_test/'
+        ]
+        
+        for pattern in llmdiver_patterns:
+            if pattern in file_path:
+                return True
+        return False
+    
+    def _generate_smart_commit_message(self, changed_files, analysis_data):
+        """Generate commit message for actual project files (not LLMdiver analysis)"""
+        file_count = len(changed_files)
+        file_types = set()
+        
+        for file_path in changed_files:
+            if file_path.endswith('.py'):
+                file_types.add('Python')
+            elif file_path.endswith(('.js', '.ts')):
+                file_types.add('JavaScript/TypeScript')
+            elif file_path.endswith('.sh'):
+                file_types.add('Shell')
+            elif file_path.endswith('.md'):
+                file_types.add('Documentation')
+            else:
+                file_types.add('Other')
+        
+        file_type_str = ', '.join(sorted(file_types))
+        
+        return f"🤖 LLMdiver: Update codebase\n\nModified {file_count} files: {file_type_str}\n\n🤖 Generated with [Claude Code](https://claude.ai/code)\n\nCo-Authored-By: Claude <noreply@anthropic.com>"
 
     def commit_and_push(self, changed_files, analysis_result):
         """Legacy method for backwards compatibility"""
@@ -228,11 +327,13 @@ class CodePreprocessor:
             if line.startswith("## File: "):
                 # If we were already in a file, save the previous one
                 if current_file_path and current_content_lines:
+                    file_content = '\n'.join(current_content_lines).strip()
                     files.append({
                         'path': current_file_path,
                         'language': current_language,
-                        'content': '\n'.join(current_content_lines).strip(),
-                        'size': len('\n'.join(current_content_lines))
+                        'content': file_content,
+                        'size': len(file_content),
+                        'code_blocks': self._extract_code_blocks(file_content, current_language)
                     })
 
                 # Reset for the new file
@@ -259,11 +360,13 @@ class CodePreprocessor:
 
         # Append the last file after the loop finishes
         if current_file_path and current_content_lines:
+            file_content = '\n'.join(current_content_lines).strip()
             files.append({
                 'path': current_file_path,
                 'language': current_language,
-                'content': '\n'.join(current_content_lines).strip(),
-                'size': len('\n'.join(current_content_lines))
+                'content': file_content,
+                'size': len(file_content),
+                'code_blocks': self._extract_code_blocks(file_content, current_language)
             })
 
         logging.info(f"Preprocessor extracted {len(files)} file sections from repomix output.")
@@ -286,6 +389,189 @@ class CodePreprocessor:
         }
         ext = Path(file_path).suffix.lower()
         return ext_map.get(ext, 'unknown')
+
+    def _extract_code_blocks(self, content: str, language: str) -> List[Dict]:
+        """Extract functions and classes from code content"""
+        blocks = []
+        
+        if language == 'python':
+            blocks.extend(self._extract_python_blocks(content))
+        elif language in ['javascript', 'typescript']:
+            blocks.extend(self._extract_js_blocks(content))
+        elif language == 'bash':
+            blocks.extend(self._extract_bash_blocks(content))
+        else:
+            # For other languages, treat the whole content as one block
+            if content.strip():
+                blocks.append({
+                    'type': 'file_content',
+                    'name': f'{language}_content',
+                    'content': content.strip(),
+                    'line_start': 1,
+                    'line_end': len(content.split('\n'))
+                })
+        
+        logging.debug(f"Extracted {len(blocks)} code blocks for {language}")
+        return blocks
+
+    def _extract_python_blocks(self, content: str) -> List[Dict]:
+        """Extract Python functions and classes"""
+        import re
+        blocks = []
+        lines = content.split('\n')
+        
+        # Regex patterns for Python constructs
+        func_pattern = re.compile(r'^(\s*)def\s+(\w+)\s*\(([^)]*)\):')
+        class_pattern = re.compile(r'^(\s*)class\s+(\w+)(\([^)]*\))?:')
+        
+        i = 0
+        while i < len(lines):
+            line = lines[i]
+            
+            # Check for function definition
+            func_match = func_pattern.match(line)
+            if func_match:
+                indent, func_name, params = func_match.groups()
+                start_line = i + 1
+                block_content = [line]
+                i += 1
+                
+                # Find the end of the function by tracking indentation
+                base_indent_len = len(indent)
+                while i < len(lines):
+                    current_line = lines[i]
+                    if current_line.strip() == '':
+                        block_content.append(current_line)
+                        i += 1
+                        continue
+                    
+                    current_indent = len(current_line) - len(current_line.lstrip())
+                    if current_indent <= base_indent_len and current_line.strip():
+                        break
+                    
+                    block_content.append(current_line)
+                    i += 1
+                
+                blocks.append({
+                    'type': 'function',
+                    'name': func_name,
+                    'content': '\n'.join(block_content),
+                    'line_start': start_line,
+                    'line_end': i,
+                    'parameters': params.strip()
+                })
+                continue
+            
+            # Check for class definition
+            class_match = class_pattern.match(line)
+            if class_match:
+                indent, class_name, inheritance = class_match.groups()
+                start_line = i + 1
+                block_content = [line]
+                i += 1
+                
+                # Find the end of the class
+                base_indent_len = len(indent)
+                while i < len(lines):
+                    current_line = lines[i]
+                    if current_line.strip() == '':
+                        block_content.append(current_line)
+                        i += 1
+                        continue
+                    
+                    current_indent = len(current_line) - len(current_line.lstrip())
+                    if current_indent <= base_indent_len and current_line.strip():
+                        break
+                    
+                    block_content.append(current_line)
+                    i += 1
+                
+                blocks.append({
+                    'type': 'class',
+                    'name': class_name,
+                    'content': '\n'.join(block_content),
+                    'line_start': start_line,
+                    'line_end': i,
+                    'inheritance': inheritance.strip('()') if inheritance else None
+                })
+                continue
+            
+            i += 1
+        
+        return blocks
+
+    def _extract_js_blocks(self, content: str) -> List[Dict]:
+        """Extract JavaScript/TypeScript functions"""
+        import re
+        blocks = []
+        lines = content.split('\n')
+        
+        # Patterns for JS/TS functions
+        func_patterns = [
+            re.compile(r'^\s*function\s+(\w+)\s*\(([^)]*)\)'),
+            re.compile(r'^\s*const\s+(\w+)\s*=\s*\(([^)]*)\)\s*=>'),
+            re.compile(r'^\s*(\w+)\s*:\s*function\s*\(([^)]*)\)'),
+        ]
+        
+        for i, line in enumerate(lines):
+            for pattern in func_patterns:
+                match = pattern.search(line)
+                if match:
+                    func_name = match.group(1)
+                    params = match.group(2) if len(match.groups()) > 1 else ''
+                    
+                    # Extract function body (simplified - just take a few lines)
+                    block_lines = [line]
+                    for j in range(i + 1, min(i + 20, len(lines))):
+                        block_lines.append(lines[j])
+                        if '}' in lines[j]:
+                            break
+                    
+                    blocks.append({
+                        'type': 'function',
+                        'name': func_name,
+                        'content': '\n'.join(block_lines),
+                        'line_start': i + 1,
+                        'line_end': i + len(block_lines),
+                        'parameters': params.strip()
+                    })
+                    break
+        
+        return blocks
+
+    def _extract_bash_blocks(self, content: str) -> List[Dict]:
+        """Extract Bash functions"""
+        import re
+        blocks = []
+        lines = content.split('\n')
+        
+        func_pattern = re.compile(r'^\s*(\w+)\s*\(\s*\)\s*\{?')
+        
+        for i, line in enumerate(lines):
+            match = func_pattern.match(line)
+            if match:
+                func_name = match.group(1)
+                
+                # Extract function body
+                block_lines = [line]
+                brace_count = line.count('{') - line.count('}')
+                
+                for j in range(i + 1, len(lines)):
+                    block_lines.append(lines[j])
+                    brace_count += lines[j].count('{') - lines[j].count('}')
+                    
+                    if brace_count <= 0:
+                        break
+                
+                blocks.append({
+                    'type': 'function',
+                    'name': func_name,
+                    'content': '\n'.join(block_lines),
+                    'line_start': i + 1,
+                    'line_end': i + len(block_lines)
+                })
+        
+        return blocks
 
     def preprocess_repomix_output(self, content: str) -> Dict:
         """Preprocess the repomix markdown output into structured format"""
@@ -434,11 +720,23 @@ class CodeIndexer:
         logging.info(f"Found {len(unique_blocks)} unique similar code blocks with threshold > {similarity_threshold}.")
         return unique_blocks
 
-    def update_index(self, code_blocks):
-        """Update the indexed code blocks"""
-        self.stored_blocks = code_blocks
-        self.block_files = []  # Store file paths for each block
-        logging.info(f"Updated code index with {len(code_blocks)} blocks")
+    def update_index(self, preprocessed_data):
+        """Update the indexed code blocks from preprocessed data"""
+        all_blocks = []
+        block_files = []
+        
+        for file_data in preprocessed_data.get('files', []):
+            file_path = file_data['path']
+            code_blocks = file_data.get('code_blocks', [])
+            
+            for block in code_blocks:
+                # Store the actual function/class content for similarity comparison
+                all_blocks.append(block['content'])
+                block_files.append(f"{file_path}:{block.get('name', 'unknown')}")
+        
+        self.stored_blocks = all_blocks
+        self.block_files = block_files
+        logging.info(f"Updated code index with {len(all_blocks)} code blocks from {len(preprocessed_data.get('files', []))} files")
 
     def get_semantic_context(self, preprocessed_data):
         """Get semantic context by finding similar code patterns"""
@@ -447,38 +745,45 @@ class CodeIndexer:
             if not files:
                 return ""
             
-            # Extract code blocks from files
-            all_blocks = []
+            # Extract all code blocks from all files
+            all_query_blocks = []
             for file_data in files:
-                content = file_data.get('content', '')
-                if content.strip():
-                    all_blocks.append(content)
+                code_blocks = file_data.get('code_blocks', [])
+                for block in code_blocks:
+                    all_query_blocks.append(block['content'])
             
-            if len(all_blocks) < 2:
+            if len(all_query_blocks) < 2:
+                logging.info("Not enough code blocks for semantic comparison")
                 return ""
             
-            # Find similar code using the first block as query
-            similar_results = self.find_similar_code([all_blocks[0]], similarity_threshold=0.3)
+            # Use the first few blocks as queries to find similar patterns
+            query_blocks = all_query_blocks[:3]  # Use first 3 blocks as queries
+            similar_results = self.find_similar_code(query_blocks, similarity_threshold=0.3)
             
             if not similar_results:
+                logging.info("No similar code patterns found with threshold 0.3")
                 return ""
             
             # Format results
             context_lines = ["## Semantic Code Analysis", ""]
             context_lines.append(f"Found {len(similar_results)} similar code patterns:")
             
-            for i, result in enumerate(similar_results[:3]):  # Top 3 results
-                context_lines.append(f"### Similar Block {i+1} (Score: {result['similarity']:.2f})")
-                context_lines.append(f"File: {result.get('file_path', 'Unknown')}")
+            for i, result in enumerate(similar_results[:5]):  # Top 5 results
+                context_lines.append(f"### Similar Pattern {i+1} (Score: {result['similarity']:.3f})")
+                context_lines.append(f"Location: {result.get('file_path', 'Unknown')}")
                 context_lines.append("```")
-                context_lines.append(result['similar_block'][:200] + "..." if len(result['similar_block']) > 200 else result['similar_block'])
+                # Show a meaningful snippet
+                snippet = result['similar_block']
+                if len(snippet) > 300:
+                    snippet = snippet[:300] + "..."
+                context_lines.append(snippet)
                 context_lines.append("```")
                 context_lines.append("")
             
             return "\n".join(context_lines)
             
         except Exception as e:
-            logging.error(f"Error in get_semantic_context: {e}")
+            logging.error(f"Error in get_semantic_context: {e}", exc_info=True)
             return ""
 
 class MetricsCollector:
