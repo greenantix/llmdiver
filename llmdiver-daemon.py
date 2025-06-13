@@ -1503,9 +1503,9 @@ class RepomixProcessor:
             analysis_dir = Path(repo_config["path"]) / ".llmdiver"
             analysis_dir.mkdir(exist_ok=True)
 
-            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-            analysis_file = analysis_dir / f"enhanced_analysis_{timestamp}.md"
-            json_analysis_file = analysis_dir / f"analysis_data_{timestamp}.json"
+            # --- FIX: Use static filenames instead of timestamped ones ---
+            analysis_file = analysis_dir / "LATEST_ANALYSIS.md"
+            json_analysis_file = analysis_dir / "LATEST_ANALYSIS.json"
 
             analysis_data = {
                 "metadata": {
@@ -1647,9 +1647,10 @@ class FileChangeHandler(FileSystemEventHandler):
         if event.is_directory:
             return
 
-        # --- FIX: Check if the modified file is an internal operational file ---
-        if self.processor.code_preprocessor._is_llmdiver_internal_file(event.src_path):
-            logging.info(f"Ignoring change in internal file: {event.src_path}")
+        # --- FIX: Use resolved paths for a more reliable check ---
+        changed_path = Path(event.src_path).resolve()
+        if self.processor.code_preprocessor._is_llmdiver_internal_file(str(changed_path)):
+            logging.info(f"Ignoring change in internal file: {changed_path}")
             return
 
         current_time = time.time()
