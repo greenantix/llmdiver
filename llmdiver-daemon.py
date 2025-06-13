@@ -132,6 +132,131 @@ class GitAutomation:
             self.repo.index.commit("📚 Update LLMdiver documentation")
             logger.info("Updated documentation")
 
+class CodePreprocessor:
+    def __init__(self, remove_comments=True, remove_whitespace=True):
+        self.remove_comments = remove_comments
+        self.remove_whitespace = remove_whitespace
+
+    def _extract_file_sections(self, content: str) -> List[Dict]:
+        """Extract individual file sections from repomix output"""
+        files = []
+        current_file_path = None
+        current_language = 'unknown'
+        current_content_lines = []
+        in_code_block = False
+
+        for line in content.split('\n'):
+            # Check for the start of a new file
+            if line.startswith("## File: "):
+                # If we were already in a file, save the previous one
+                if current_file_path and current_content_lines:
+                    files.append({
+                        'path': current_file_path,
+                        'language': current_language,
+                        'content': '\n'.join(current_content_lines).strip(),
+                        'size': len('\n'.join(current_content_lines))
+                    })
+
+                # Reset for the new file
+                current_file_path = line.replace("## File: ", "").strip()
+                current_content_lines = []
+                in_code_block = False  # Wait for the code block to start
+                current_language = self._detect_language(current_file_path)
+
+            # Check for the start of a code block
+            elif line.startswith("```"):
+                if not in_code_block:
+                    in_code_block = True
+                    # Optional: capture language from ```bash, ```python etc.
+                    lang_spec = line.replace("```", "").strip()
+                    if lang_spec:
+                        current_language = lang_spec
+                else:
+                    # End of code block for the current file
+                    in_code_block = False
+
+            # If we are inside a code block, append the line
+            elif current_file_path and in_code_block:
+                current_content_lines.append(line)
+
+        # Append the last file after the loop finishes
+        if current_file_path and current_content_lines:
+            files.append({
+                'path': current_file_path,
+                'language': current_language,
+                'content': '\n'.join(current_content_lines).strip(),
+                'size': len('\n'.join(current_content_lines))
+            })
+
+        logging.info(f"Preprocessor extracted {len(files)} file sections from repomix output.")
+        return files
+
+    def _detect_language(self, file_path: str) -> str:
+        """Detect programming language from file extension"""
+        ext_map = {
+            '.py': 'python',
+            '.js': 'javascript',
+            '.ts': 'typescript',
+            '.go': 'go',
+            '.rs': 'rust',
+            '.java': 'java',
+            '.cpp': 'cpp',
+            '.c': 'c',
+            '.rb': 'ruby',
+            '.php': 'php',
+            '.sh': 'bash'
+        }
+        ext = Path(file_path).suffix.lower()
+        return ext_map.get(ext, 'unknown')
+
+    def preprocess_repomix_output(self, content: str) -> Dict:
+        """Preprocess the repomix markdown output into structured format"""
+        files = self._extract_file_sections(content)
+
+        if not files:
+            logging.warning("No valid file sections found in repomix output")
+            return {'files': [], 'metrics': {}}
+
+        total_size = sum(f['size'] for f in files)
+        avg_size = total_size / len(files) if files else 0
+
+        metrics = {
+            'total_files': len(files),
+            'total_size': total_size,
+            'average_file_size': avg_size,
+            'languages': list(set(f['language'] for f in files))
+        }
+
+        return {
+            'files': files,
+            'metrics': metrics
+        }
+
+    def format_for_llm(self, preprocessed_data: Dict) -> str:
+        """Format preprocessed data for LLM consumption"""
+        output = []
+        metrics = preprocessed_data['metrics']
+
+        output.append("## Project Metrics")
+        output.append(f"- Total Files: {metrics['total_files']}")
+        output.append(f"- Total Code Size: {metrics['total_size']} characters")
+        output.append(f"- Average File Size: {metrics['average_file_size']:.1f} characters")
+        output.append(f"- Languages: {', '.join(metrics['languages'])}")
+        output.append("")
+
+        output.append("## File Analysis")
+        for file_data in preprocessed_data['files']:
+            output.append(f"### {file_data['path']}")
+            output.append(f"- Language: {file_data['language']}")
+            output.append(f"- Size: {file_data['size']} characters")
+            output.append("```" + file_data['language'])
+            output.append(file_data['content'])
+            output.append("```")
+            output.append("")
+
+        return '\n'.join(output)
+
+
 class CodeIndexer:
     def __init__(self, config):
         self.config = config
@@ -357,7 +482,7 @@ class RepomixProcessor:
         self.code_preprocessor = self.create_preprocessor()
         self.intelligent_router = self.create_intelligent_router()
         self.multi_project_manager = self.create_project_manager()
-        self.llm_client = LLM_Client(config.get('llm_integration', {}))
+        self.llm_client = LLM_Client(config.get('llm_integration', {})) # Assuming LLM_Client class exists
         
         # Initialize git automation for each repo
         for repo in config.get('repositories', []):
@@ -404,13 +529,75 @@ class RepomixProcessor:
             logging.error(f"Failed to run repomix analysis: {e}")
             return None
 
+    def _extract_structured_findings(self, analysis_text: str) -> Dict: #
+        """Extract structured findings from AI analysis text for JSON output"""
+        findings = {
+            "executive_summary": "", #
+            "critical_issues": [], #
+            "high_priority": [], #
+            "medium_priority": [], #
+            "low_priority": [], #
+            "recommendations": [] #
+        }
+
+        section_map = {
+            "executive summary": "executive_summary",
+            "critical vulnerabilities": "critical_issues",
+            "critical security & stability issues": "critical_issues",
+            "critical issues": "critical_issues",
+            "authentication & authorization issues": "high_priority",
+            "architectural problems": "high_priority",
+            "performance & scalability concerns": "high_priority",
+            "high priority concerns": "high_priority",
+            "input validation & injection risks": "medium_priority",
+            "technical debt & todos": "medium_priority",
+            "technical debt analysis": "medium_priority",
+            "security configuration & headers": "low_priority",
+            "dead code & optimization": "low_priority",
+            "recommendations": "recommendations",
+            "implementation roadmap": "recommendations",
+            "claude code action items": "recommendations"
+        }
+
+        current_section_key = None
+
+        for line in analysis_text.split('\n'):
+            line_stripped = line.strip()
+
+            # Check if the line is a section header
+            is_header = False
+            if line_stripped.startswith('## '):
+                header_text = line_stripped.replace('## ', '').lower()
+                # Find the corresponding key in our map
+                for key, value in section_map.items():
+                    if key in header_text:
+                        current_section_key = value
+                        is_header = True
+                        break
+
+            # If it's not a header and we are in a section, append the content
+            if not is_header and current_section_key:
+                if line_stripped:
+                    # For lists, just append the content
+                    if current_section_key != 'executive_summary':
+                         if line_stripped.startswith(('-', '*', '1.', '2.', '3.')):
+                            findings[current_section_key].append(line_stripped)
+                    # For summary, append the whole line
+                    else:
+                        # Re-constitute the summary paragraph
+                        if findings[current_section_key]:
+                            findings[current_section_key] += " " + line_stripped
+                        else:
+                            findings[current_section_key] = line_stripped
+
+        return findings
     def analyze_manifest_changes(self, repo_config):
         """Analyze changes in dependency manifests"""
         try:
             repo_path = Path(repo_config['path'])
             manifest_files = [
                 'package.json',
-                'requirements.txt',
+                'requirements.txt', 
                 'Cargo.toml',
                 'go.mod',
                 'pom.xml',
@@ -478,28 +665,25 @@ class RepomixProcessor:
             logging.info("Step 6: Constructing final prompt for LLM analysis...")
             enhanced_summary = f"""# Repository Analysis: {repo_config['name']}
 
-## Project Context
-- Primary Language: {project_info['primary_language']}
-- Framework: {project_info['framework']}
-- Manifest Files: {len(project_info['manifests'])}
+            ## Project Context
+            - Primary Language: {project_info['primary_language']}
+            - Framework: {project_info['framework']}
+            - Manifest Files: {len(project_info['manifests'])}
 
-{manifest_analysis}
+            {manifest_analysis}
 
-{semantic_context}
+            {semantic_context}
 
-## Preprocessed Code Analysis
-{formatted_summary}
+            ## Preprocessed Code Analysis
+            {formatted_summary}
 
-## Raw Code Data
-{summary}
-
-## Analysis Instructions
-When analyzing this codebase, pay special attention to:
-1. **Dependency Security**: If manifest changes detected, assess security implications of new/removed packages
-2. **Language-Specific Patterns**: Apply {project_info['primary_language']}-specific best practices and common issues
-3. **Code Structure**: Use the preprocessed architecture overview and complexity hotspots to focus analysis
-4. **Code Reuse**: If similar code found, evaluate opportunities for refactoring and deduplication
-"""
+            ## Analysis Instructions
+            When analyzing this codebase, pay special attention to:
+            1. **Dependency Security**: If manifest changes detected, assess security implications of new/removed packages
+            2. **Language-Specific Patterns**: Apply {project_info['primary_language']}-specific best practices and common issues
+            3. **Code Structure**: Use the preprocessed architecture overview and complexity hotspots to focus analysis
+            4. **Code Reuse**: If similar code found, evaluate opportunities for refactoring and deduplication
+            """
             logging.info(f"Final prompt constructed ({len(enhanced_summary)} characters).")
 
             # Step 7: Send to LLM for analysis
@@ -660,216 +844,4 @@ class FileChangeHandler(FileSystemEventHandler):
             return
 
         self.last_run = current_time
-        repo_path = os.path.dirname(event.src_path)
-        logger.info(f"Change detected in {event.src_path}")
-        self.processor.run_analysis(repo_path)
-
-class APIHandler(BaseHTTPRequestHandler):
-    def __init__(self, *args, processor=None, **kwargs):
-        self.processor = processor
-        super().__init__(*args, **kwargs)
-
-    def do_GET(self):
-        try:
-            if self.path == '/status':
-                self.send_json_response({'status': 'running', 'version': '1.0.0'})
-            elif self.path == '/repos':
-                repos = [{'name': r['name'], 'path': r['path']}
-                        for r in self.processor.config['repositories']]
-                self.send_json_response({'repositories': repos})
-            elif self.path.startswith('/repos/'):
-                parts = self.path.split('/')
-                if len(parts) < 4:
-                    raise ValueError("Invalid repo path")
-                    
-                repo_name = parts[2]
-                action = parts[3]
-                repo = self.get_repo_config(repo_name)
-                
-                if action == 'issues':
-                    issues = self.get_repo_issues(repo)
-                    self.send_json_response({'issues': issues})
-                elif action == 'insights':
-                    insights = self.get_repo_insights(repo)
-                    self.send_json_response({'insights': insights})
-                else:
-                    self.send_error(404, "Unknown action")
-            else:
-                self.send_error(404, "Not found")
-        except Exception as e:
-            self.send_error(500, str(e))
-
-    def do_POST(self):
-        try:
-            if self.path.startswith('/repos/'):
-                parts = self.path.split('/')
-                if len(parts) < 4:
-                    raise ValueError("Invalid repo path")
-                    
-                repo_name = parts[2]
-                action = parts[3]
-                
-                if action == 'analyze':
-                    repo = self.get_repo_config(repo_name)
-                    self.processor.run_analysis(repo['path'])
-                    self.send_json_response({'status': 'analysis_started'})
-                elif action == 'clone':
-                    content_length = int(self.headers.get('content-length', 0))
-                    if content_length:
-                        body = self.rfile.read(content_length)
-                        data = json.loads(body)
-                        if 'url' not in data:
-                            raise ValueError("Missing repository URL")
-                        
-                        # Clone remote repository
-                        repo_path = self.clone_remote_repo(data['url'], repo_name)
-                        self.send_json_response({
-                            'status': 'cloned',
-                            'path': repo_path
-                        })
-                    else:
-                        raise ValueError("Missing request body")
-                else:
-                    self.send_error(404, "Unknown action")
-            else:
-                self.send_error(404, "Not found")
-        except Exception as e:
-            self.send_error(500, str(e))
-
-    def send_json_response(self, data):
-        self.send_response(200)
-        self.send_header('Content-type', 'application/json')
-        self.end_headers()
-        self.wfile.write(json.dumps(data).encode())
-
-    def get_repo_config(self, repo_name):
-        for repo in self.processor.config['repositories']:
-            if repo['name'] == repo_name:
-                return repo
-        raise ValueError(f"Repository {repo_name} not found")
-
-    def get_repo_issues(self, repo):
-        """Get current issues from latest analysis"""
-        try:
-            analysis_file = Path(repo['path']) / '.llmdiver/repomix.md'
-            if analysis_file.exists():
-                with open(analysis_file) as f:
-                    content = f.read()
-                    # Simple parsing - could be enhanced
-                    if '## Issues' in content:
-                        issues_section = content.split('## Issues')[1].split('##')[0]
-                        return [issue.strip() for issue in issues_section.split('\n') if issue.strip()]
-            return []
-        except Exception as e:
-            logger.error(f"Failed to get repo issues: {e}")
-            return []
-
-    def get_repo_insights(self, repo):
-        """Get insights from latest analysis"""
-        try:
-            analysis_file = Path(repo['path']) / '.llmdiver/repomix.md'
-            if analysis_file.exists():
-                with open(analysis_file) as f:
-                    content = f.read()
-                    # Simple parsing - could be enhanced
-                    if '## Insights' in content:
-                        insights_section = content.split('## Insights')[1].split('##')[0]
-                        return [insight.strip() for insight in insights_section.split('\n') if insight.strip()]
-            return []
-        except Exception as e:
-            logger.error(f"Failed to get repo insights: {e}")
-            return []
-
-    def clone_remote_repo(self, url, repo_name):
-        """Clone a remote repository for analysis"""
-        base_path = Path(self.processor.config['repositories'][0]['path']).parent
-        repo_path = base_path / repo_name
-        
-        if repo_path.exists():
-            logger.warning(f"Repository path already exists: {repo_path}")
-            return str(repo_path)
-            
-        try:
-            git.Repo.clone_from(url, str(repo_path))
-            logger.info(f"Cloned repository to {repo_path}")
-            
-            # Add to monitored repositories
-            self.processor.config['repositories'].append({
-                'name': repo_name,
-                'path': str(repo_path),
-                'auto_commit': False,
-                'auto_push': False,
-                'analysis_triggers': ["*.py", "*.js", "*.ts", "*.jsx", "*.tsx", "*.sh"],
-                'commit_threshold': 10
-            })
-            
-            # Start watching the new repository
-            event_handler = FileChangeHandler(self.processor)
-            observer = Observer()
-            observer.schedule(event_handler, str(repo_path), recursive=True)
-            observer.start()
-            
-            return str(repo_path)
-        except Exception as e:
-            logger.error(f"Failed to clone repository: {e}")
-            raise
-
-def _extract_structured_findings(self, analysis_text: str) -> Dict:
-    """Extract structured findings from analysis text"""
-    findings = {
-        "issues": [],
-        "improvements": [],
-        "security": [],
-        "dependencies": []
-    }
-    
-    current_section = None
-    for line in analysis_text.split('\n'):
-        if '## Issues' in line:
-            current_section = 'issues'
-        elif '## Improvements' in line:
-            current_section = 'improvements'
-        elif '## Security' in line:
-            current_section = 'security'
-        elif '## Dependencies' in line:
-            current_section = 'dependencies'
-        elif line.strip() and current_section and line.startswith('- '):
-            findings[current_section].append(line.strip('- ').strip())
-            
-    return findings
-
-def main():
-    # Load configuration
-    config = Config()
-    
-    # Initialize components
-    processor = RepomixProcessor(config.config)
-    
-    # Set up file watching for each repository
-    observer = Observer()
-    for repo_config in config.config.get('repositories', []):
-        repo_path = repo_config['path']
-        event_handler = FileChangeHandler(processor)
-        observer.schedule(event_handler, repo_path, recursive=True)
-        logger.info(f"Watching repository: {repo_path}")
-    
-    observer.start()
-
-    # Set up API server
-    daemon_config = config.config['daemon']
-    server = HTTPServer(
-        (daemon_config['host'], daemon_config['port']),
-        lambda *args: APIHandler(*args, processor=processor)
-    )
-    
-    logger.info(f"Starting API server on {daemon_config['host']}:{daemon_config['port']}")
-    try:
-        server.serve_forever()
-    except KeyboardInterrupt:
-        observer.stop()
-        server.shutdown()
-    
-    observer.join()
-
-if __name__ == '__main__':
-    main()
+        repo_path = os

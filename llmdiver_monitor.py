@@ -24,6 +24,7 @@ class LLMdiverMonitor:
         self.root.title("LLMdiver Monitor - AI Code Analysis Dashboard")
         self.root.geometry("1400x900")
         self.log_queue = queue.Queue()
+        self.command_queue = queue.Queue()  # Add command queue for background thread results
         
         # Configure style
         style = ttk.Style()
@@ -44,6 +45,9 @@ class LLMdiverMonitor:
         
         # Load initial configuration
         self.load_configuration()
+        
+        # Start processing command queue
+        self.process_command_queue()  # Add this line
         
     def setup_interface(self):
         """Create the main GUI interface"""
@@ -188,6 +192,7 @@ class LLMdiverMonitor:
         
         ttk.Button(config_control_frame, text="🔄 Reload Config", command=self.load_configuration).pack(side=tk.LEFT, padx=5)
         ttk.Button(config_control_frame, text="💾 Save Config", command=self.save_configuration).pack(side=tk.LEFT, padx=5)
+        ttk.Button(config_control_frame, text="✅ Validate JSON", command=self.validate_configuration).pack(side=tk.LEFT, padx=5)  # Add this
         ttk.Button(config_control_frame, text="📁 Browse File", command=self.browse_config_file).pack(side=tk.LEFT, padx=5)
         
         # Config editor
@@ -242,6 +247,15 @@ class LLMdiverMonitor:
         
         # Refresh results initially
         self.refresh_results()
+
+    def validate_configuration(self):
+        """Validate the JSON configuration in the editor without saving."""
+        config_data = self.config_text.get("1.0", tk.END)
+        try:
+            json.loads(config_data)
+            messagebox.showinfo("Validation Success", "JSON configuration is valid.")
+        except json.JSONDecodeError as e:
+            messagebox.showerror("Validation Error", f"Invalid JSON format: {e}")
     
     def setup_system_tab(self):
         """Setup the system information tab"""
@@ -261,27 +275,69 @@ class LLMdiverMonitor:
     
     def start_daemon(self):
         """Start the LLMdiver daemon"""
+        self.run_command_in_thread(
+            ["./start_llmdiver.sh", "start"],
+            "Daemon started successfully.",
+            "Failed to start daemon."
+        )
+    
+    def stop_daemon(self):
+        """Stop the LLMdiver daemon"""
+        self.run_command_in_thread(
+            ["./start_llmdiver.sh", "stop"],
+            "Daemon stopped successfully.",
+            "Failed to stop daemon."
+        )
+    
+    def restart_daemon(self):
+        """Restart the LLMdiver daemon"""
+        self.run_command_in_thread(
+            ["./start_llmdiver.sh", "restart"],
+            "Daemon restarted successfully.",
+            "Failed to restart daemon."
+        )
+    
+    def force_analysis(self):
+        """Force a manual analysis run"""
+        self.run_command_in_thread(
+            ["./run_llm_audit.sh"],
+            "Manual analysis completed successfully.",
+            "Manual analysis failed."
+        )
+    
+    def run_command_in_thread(self, command: list, success_msg: str, failure_msg: str):
+        """Run a shell command in a background thread to prevent GUI freezing."""
+        self.progress.start()
+        
+        def command_thread():
+            try:
+                result = subprocess.run(command, capture_output=True, text=True, timeout=300)
+                if result.returncode == 0:
+                    self.command_queue.put((f"✅ {success_msg}", False))
+                else:
+                    error_details = result.stderr if result.stderr else "No error details available."
+                    self.command_queue.put((f"❌ {failure_msg}: {error_details}", True))
+            except subprocess.TimeoutExpired:
+                self.command_queue.put((f"❌ {failure_msg}: Command timed out after 5 minutes.", True))
+            except Exception as e:
+                self.command_queue.put((f"❌ {failure_msg}: {e}", True))
+        
+        thread = threading.Thread(target=command_thread, daemon=True)
+        thread.start()
+    
+    def process_command_queue(self):
+        """Process results from background commands."""
         try:
-            self.progress.start()
-            self.log_message("Starting LLMdiver daemon...")
-            
-            # Use the start script
-            result = subprocess.run(["./start_llmdiver.sh", "start"], 
-                                  capture_output=True, text=True, timeout=30)
-            
-            if result.returncode == 0:
-                self.log_message("✅ Daemon started successfully")
-                time.sleep(2)  # Give daemon time to start
-                self.check_daemon_status()
-            else:
-                self.log_message(f"❌ Failed to start daemon: {result.stderr}")
-                messagebox.showerror("Error", f"Failed to start daemon:\n{result.stderr}")
-                
-        except Exception as e:
-            self.log_message(f"❌ Error starting daemon: {e}")
-            messagebox.showerror("Error", f"Error starting daemon: {e}")
-        finally:
+            message, show_error_popup = self.command_queue.get_nowait()
+            self.log_message(message)
+            if show_error_popup:
+                messagebox.showerror("Command Error", message)
             self.progress.stop()
+            self.check_daemon_status() # Refresh status after command
+        except queue.Empty:
+            pass # No commands to process
+        finally:
+            self.root.after(200, self.process_command_queue)
     
     def stop_daemon(self):
         """Stop the LLMdiver daemon"""
@@ -534,74 +590,92 @@ class LLMdiverMonitor:
             self.load_configuration()
     
     def refresh_results(self):
-        """Refresh the analysis results"""
-        # Clear existing items
+        """Refresh the analysis results by reading from structured JSON data."""
         for item in self.results_tree.get_children():
             self.results_tree.delete(item)
-        
+
         try:
-            # Look for .llmdiver directories with analysis results
-            for project_dir in Path(".").glob("**/.llmdiver"):
-                project_name = project_dir.parent.name
-                
-                # Find analysis files
-                for analysis_file in project_dir.glob("enhanced_analysis_*.md"):
-                    try:
-                        stat = analysis_file.stat()
-                        timestamp = datetime.fromtimestamp(stat.st_mtime).strftime("%Y-%m-%d %H:%M")
-                        
-                        # Try to determine analysis type and issues
-                        analysis_type = "General"
-                        issues_count = "Unknown"
-                        
-                        # Read file briefly to get info
-                        with open(analysis_file, 'r') as f:
-                            content = f.read(500)  # Read first 500 chars
-                            if "CRITICAL" in content:
-                                issues_count = "Critical Issues Found"
-                            elif "HIGH" in content:
-                                issues_count = "High Priority Issues"
-                            elif "MEDIUM" in content:
-                                issues_count = "Medium Priority Issues"
-                            else:
-                                issues_count = "No Major Issues"
-                        
-                        self.results_tree.insert('', 'end', values=(
-                            project_name, timestamp, analysis_type, "Completed", issues_count
-                        ))
-                        
-                    except Exception as e:
-                        continue
-                        
+            # Find all JSON analysis files in all subdirectories
+            analysis_files = sorted(Path(".").glob("**/analysis_data_*.json"), key=os.path.getctime, reverse=True)
+
+            for analysis_file in analysis_files:
+                with open(analysis_file, 'r') as f:
+                    data = json.load(f)
+
+                metadata = data.get("metadata", {})
+                findings = data.get("ai_analysis", {}).get("structured_findings", {})
+
+                project_name = metadata.get("project_name", "Unknown")
+                timestamp_str = metadata.get("timestamp", "Unknown")
+                timestamp = datetime.fromisoformat(timestamp_str).strftime("%Y-%m-%d %H:%M:%S")
+                analysis_type = metadata.get("analysis_type", "general").capitalize()
+
+                # Get accurate issue counts from structured data
+                crit_count = len(findings.get("critical_issues", []))
+                high_count = len(findings.get("high_priority", []))
+                med_count = len(findings.get("medium_priority", []))
+
+                status = f"Crit: {crit_count}, High: {high_count}, Med: {med_count}"
+
+                # Store the path to the JSON file in the item
+                self.results_tree.insert('', 'end', values=(
+                    project_name, timestamp, analysis_type, status
+                ), iid=str(analysis_file))
+
         except Exception as e:
-            self.log_message(f"Error refreshing results: {e}")
+            self.log_message(f"❌ Error refreshing results: {e}")
     
-    def open_selected_result(self, event):
-        """Open the selected analysis result"""
+    def open_selected_result(self, event=None):
+        """Open the selected analysis result from its JSON data and format it for display."""
         selection = self.results_tree.selection()
-        if selection:
-            item = self.results_tree.item(selection[0])
-            project_name = item['values'][0]
-            
-            # Find and display the latest analysis for this project
-            try:
-                project_path = Path(f"{project_name}/.llmdiver")
-                if not project_path.exists():
-                    # Try to find it in subdirectories
-                    for possible_path in Path(".").glob(f"**/{project_name}/.llmdiver"):
-                        project_path = possible_path
-                        break
-                
-                if project_path.exists():
-                    latest_analysis = max(project_path.glob("enhanced_analysis_*.md"), key=os.path.getctime)
-                    with open(latest_analysis, 'r') as f:
-                        content = f.read()
-                        self.results_preview.delete("1.0", tk.END)
-                        self.results_preview.insert("1.0", content)
-                        
-            except Exception as e:
-                self.results_preview.delete("1.0", tk.END)
-                self.results_preview.insert("1.0", f"Error loading result: {e}")
+        if not selection:
+            return
+
+        json_file_path = self.results_tree.item(selection[0], "id")
+
+        self.results_preview.delete("1.0", tk.END)  # Clear preview
+
+        try:
+            with open(json_file_path, 'r') as f:
+                data = json.load(f)
+
+            # Configure tags for rich text display
+            self.results_preview.tag_configure("h1", font=("Arial", 16, "bold"), spacing3=10)
+            self.results_preview.tag_configure("h2", font=("Arial", 12, "bold"), spacing3=5)
+            self.results_preview.tag_configure("bold", font=("Arial", 10, "bold"))
+            self.results_preview.tag_configure("critical", foreground="red")
+            self.results_preview.tag_configure("high", foreground="#E65100")  # Dark Orange
+            self.results_preview.tag_configure("medium", foreground="#FDD835")  # Yellow/Ochre
+            self.results_preview.tag_configure("monospace", font=("Consolas", 9))
+
+            # --- Build the formatted report ---
+            metadata = data.get('metadata', {})
+            findings = data.get('ai_analysis', {}).get('structured_findings', {})
+
+            self.results_preview.insert(tk.END, f"Analysis for: {metadata.get('project_name', 'N/A')}\n", "h1")
+            self.results_preview.insert(tk.END, f"Ran at {metadata.get('timestamp', 'N/A')} ({metadata.get('analysis_type', 'N/A').capitalize()} mode)\n\n", "monospace")
+
+            # Executive Summary
+            self.results_preview.insert(tk.END, "Executive Summary\n", "h2")
+            self.results_preview.insert(tk.END, findings.get('executive_summary', 'Not available.') + '\n\n')
+
+            # Display findings by priority
+            for key, name, tag in [
+                ('critical_issues', 'Critical Issues', 'critical'),
+                ('high_priority', 'High Priority Issues', 'high'),
+                ('medium_priority', 'Medium Priority Issues', 'medium'),
+                ('low_priority', 'Low Priority Issues', 'normal'),
+                ('recommendations', 'Recommendations', 'normal')
+            ]:
+                items = findings.get(key, [])
+                if items:
+                    self.results_preview.insert(tk.END, f"{name} ({len(items)})\n", "h2")
+                    for item in items:
+                        self.results_preview.insert(tk.END, f" • {item}\n", tag)
+                    self.results_preview.insert(tk.END, '\n')
+
+        except Exception as e:
+            self.results_preview.insert(tk.END, f"❌ Error loading result: {e}")
     
     def open_results_folder(self):
         """Open the results folder in file manager"""
