@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 
+import ast
 import json
 import logging
 import os
@@ -54,11 +55,12 @@ class Config:
             sys.exit(1)
 
 class GitAutomation:
-    def __init__(self, config, repo_config):
+    def __init__(self, config, repo_config, code_preprocessor=None):
         self.config = config['git_automation']
         self.repo_config = repo_config
         self.repo = git.Repo(repo_config['path'])
         self.lock = Lock()
+        self.code_preprocessor = code_preprocessor
 
     def should_commit(self, changed_files):
         """Determine if changes warrant a commit based on threshold"""
@@ -155,30 +157,16 @@ class GitAutomation:
         for item in self.repo.index.diff(None):
             file_path = item.a_path
             # Skip LLMdiver internal files
-            if not self._is_llmdiver_internal_file(file_path):
+            if not self.code_preprocessor._is_llmdiver_internal_file(file_path):
                 changed_files.append(file_path)
         
         # Also check untracked files
         for untracked in self.repo.untracked_files:
-            if not self._is_llmdiver_internal_file(untracked):
+            if not self.code_preprocessor._is_llmdiver_internal_file(untracked):
                 changed_files.append(untracked)
         
         return changed_files
     
-    def _is_llmdiver_internal_file(self, file_path: str) -> bool:
-        """Check if a file is internal to LLMdiver's operations."""
-        llmdiver_patterns = [
-            '.llmdiver/',
-            'llmdiver_daemon.log',
-            'llmdiver.pid',
-            'metrics/',
-            'audits/',
-            'analysis_data_',
-            'enhanced_analysis_',
-            'Action_Plan',
-            'indexing_test/'
-        ]
-        return any(pattern in file_path for pattern in llmdiver_patterns)
     
 
     def commit_and_push(self, changed_files, analysis_result):
@@ -379,89 +367,31 @@ class CodePreprocessor:
         return blocks
 
     def _extract_python_blocks(self, content: str) -> List[Dict]:
-        """Extract Python functions and classes"""
-        import re
+        """Extract Python functions and classes using the AST module."""
         blocks = []
-        lines = content.split('\n')
-        
-        # Regex patterns for Python constructs
-        func_pattern = re.compile(r'^(\s*)def\s+(\w+)\s*\(([^)]*)\):')
-        class_pattern = re.compile(r'^(\s*)class\s+(\w+)(\([^)]*\))?:')
-        
-        i = 0
-        while i < len(lines):
-            line = lines[i]
-            
-            # Check for function definition
-            func_match = func_pattern.match(line)
-            if func_match:
-                indent, func_name, params = func_match.groups()
-                start_line = i + 1
-                block_content = [line]
-                i += 1
-                
-                # Find the end of the function by tracking indentation
-                base_indent_len = len(indent)
-                while i < len(lines):
-                    current_line = lines[i]
-                    if current_line.strip() == '':
-                        block_content.append(current_line)
-                        i += 1
-                        continue
-                    
-                    current_indent = len(current_line) - len(current_line.lstrip())
-                    if current_indent <= base_indent_len and current_line.strip():
-                        break
-                    
-                    block_content.append(current_line)
-                    i += 1
-                
-                blocks.append({
-                    'type': 'function',
-                    'name': func_name,
-                    'content': '\n'.join(block_content),
-                    'line_start': start_line,
-                    'line_end': i,
-                    'parameters': params.strip()
-                })
-                continue
-            
-            # Check for class definition
-            class_match = class_pattern.match(line)
-            if class_match:
-                indent, class_name, inheritance = class_match.groups()
-                start_line = i + 1
-                block_content = [line]
-                i += 1
-                
-                # Find the end of the class
-                base_indent_len = len(indent)
-                while i < len(lines):
-                    current_line = lines[i]
-                    if current_line.strip() == '':
-                        block_content.append(current_line)
-                        i += 1
-                        continue
-                    
-                    current_indent = len(current_line) - len(current_line.lstrip())
-                    if current_indent <= base_indent_len and current_line.strip():
-                        break
-                    
-                    block_content.append(current_line)
-                    i += 1
-                
-                blocks.append({
-                    'type': 'class',
-                    'name': class_name,
-                    'content': '\n'.join(block_content),
-                    'line_start': start_line,
-                    'line_end': i,
-                    'inheritance': inheritance.strip('()') if inheritance else None
-                })
-                continue
-            
-            i += 1
-        
+        try:
+            tree = ast.parse(content)
+            for node in ast.walk(tree):
+                if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)):
+                    start_line = node.lineno
+                    # Get the full source segment for the node
+                    end_line = getattr(node, 'end_lineno', start_line)
+                    source_segment = ast.get_source_segment(content, node)
+
+                    if source_segment:
+                        block_type = 'function' if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)) else 'class'
+                        blocks.append({
+                            'type': block_type,
+                            'name': node.name,
+                            'content': source_segment,
+                            'line_start': start_line,
+                            'line_end': end_line,
+                        })
+        except SyntaxError as e:
+            logging.warning(f"Could not parse Python file with AST due to syntax error: {e}")
+        except Exception as e:
+            logging.error(f"Failed to extract Python blocks using AST: {e}")
+
         return blocks
 
     def _extract_js_blocks(self, content: str) -> List[Dict]:
@@ -594,6 +524,21 @@ class CodePreprocessor:
 
         return '\n'.join(output)
 
+    def _is_llmdiver_internal_file(self, file_path: str) -> bool:
+        """Check if a file is internal to LLMdiver's operations."""
+        llmdiver_patterns = [
+            '.llmdiver/',
+            'llmdiver_daemon.log',
+            'llmdiver.pid',
+            'metrics/',
+            'audits/',
+            'analysis_data_',
+            'enhanced_analysis_',
+            'Action_Plan',
+            'indexing_test/'
+        ]
+        return any(pattern in file_path for pattern in llmdiver_patterns)
+
 
 class CodeIndexer:
     def __init__(self, config):
@@ -717,7 +662,7 @@ class CodeIndexer:
                     all_query_blocks.append(block['content'])
             
             if len(all_query_blocks) < 2:
-                logging.info("Not enough code blocks for semantic comparison")
+                logging.info("Not enough code blocks for semantic comparison.")
                 return ""
             
             # Use the first few blocks as queries to find similar patterns
@@ -725,10 +670,10 @@ class CodeIndexer:
             similar_results = self.find_similar_code(query_blocks, similarity_threshold=0.3)
             
             if not similar_results:
-                logging.info("No similar code patterns found with threshold 0.3")
+                logging.info("No semantically similar code found matching the threshold.")
                 return ""
             
-            # Format results
+            # --- FIX: The log message should only appear if we actually build a context string ---
             context_lines = ["## Semantic Code Analysis", ""]
             context_lines.append(f"Found {len(similar_results)} similar code patterns:")
             
@@ -744,6 +689,7 @@ class CodeIndexer:
                 context_lines.append("```")
                 context_lines.append("")
             
+            logging.info(f"Successfully generated semantic context with {len(similar_results)} blocks.")
             return "\n".join(context_lines)
             
         except Exception as e:
@@ -1309,7 +1255,7 @@ class RepomixProcessor:
 
         # Initialize git automation for each repo
         for repo in config.get('repositories', []):
-            self.git_automations[repo['name']] = GitAutomation(config, repo)
+            self.git_automations[repo['name']] = GitAutomation(config, repo, self.code_preprocessor)
 
     def run_repomix_analysis(self, repo_path):
         """Run initial repomix analysis on repository and return the summary"""
@@ -1669,6 +1615,11 @@ class FileChangeHandler(FileSystemEventHandler):
 
     def on_modified(self, event):
         if event.is_directory:
+            return
+
+        # --- FIX: Check if the modified file is an internal operational file ---
+        if self.processor.code_preprocessor._is_llmdiver_internal_file(event.src_path):
+            logging.info(f"Ignoring change in internal file: {event.src_path}")
             return
 
         current_time = time.time()
