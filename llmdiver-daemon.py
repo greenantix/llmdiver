@@ -16,6 +16,22 @@ import git
 from pathlib import Path
 from typing import Dict, List
 import tiktoken
+import numpy as np
+from sklearn.feature_extraction.text import TfidfVectorizer
+from sklearn.metrics.pairwise import cosine_similarity
+
+# Check for optional dependencies
+try:
+    import sentence_transformers
+    SENTENCE_TRANSFORMERS_AVAILABLE = True
+except ImportError:
+    SENTENCE_TRANSFORMERS_AVAILABLE = False
+
+try:
+    import llama_cpp
+    LLAMA_CPP_AVAILABLE = True
+except ImportError:
+    LLAMA_CPP_AVAILABLE = False
 
 # Configure logging
 logging.basicConfig(
@@ -115,6 +131,101 @@ class GitAutomation:
             self.repo.index.add([str(index_path)])
             self.repo.index.commit("📚 Update LLMdiver documentation")
             logger.info("Updated documentation")
+
+class CodeIndexer:
+    def __init__(self, config):
+        self.config = config
+        self.embedding_model = None
+        self.embedding_backend = None
+        self._initialize_embedding_backend()
+
+    def _initialize_embedding_backend(self):
+        """Initialize the appropriate embedding backend"""
+        model_choice = self.config.get("embedding_model", "tfidf")
+        logging.info(f"Attempting to initialize embedding model: '{model_choice}'")
+
+        if model_choice == "sentence_transformers" and SENTENCE_TRANSFORMERS_AVAILABLE:
+            try:
+                from sentence_transformers import SentenceTransformer
+                model_name = self.config.get("model_name", "all-MiniLM-L6-v2")
+                self.embedding_backend = SentenceTransformer(model_name)
+                logging.info(f"SUCCESS: Initialized SentenceTransformers with model: {model_name}")
+                self.embedding_model = "sentence_transformers"
+                return
+            except Exception as e:
+                logging.warning(f"Failed to load SentenceTransformers model: {e}. Falling back to TF-IDF.")
+
+        if model_choice == "llama_cpp" and LLAMA_CPP_AVAILABLE:
+            try:
+                model_path = self.config.get("model_path", "")
+                if model_path and os.path.exists(model_path):
+                    from llama_cpp import Llama
+                    self.embedding_backend = Llama(model_path=model_path, embedding=True, n_ctx=512, verbose=False)
+                    logging.info(f"SUCCESS: Initialized Llama.cpp embedding model from path: {model_path}")
+                    self.embedding_model = "llama_cpp"
+                    return
+                else:
+                    logging.warning(f"Llama.cpp model path not found or not specified: '{model_path}'. Falling back to TF-IDF.")
+            except Exception as e:
+                logging.warning(f"Failed to load Llama.cpp model: {e}. Falling back to TF-IDF.")
+
+        # Default to TF-IDF
+        self.embedding_model = "tfidf"
+        self.embedding_backend = TfidfVectorizer(max_features=1000, stop_words='english', ngram_range=(1, 2))
+        logging.info("Initialized fallback TF-IDF vectorizer for semantic search.")
+
+    def find_similar_code(self, query_blocks, similarity_threshold=0.7):
+        """Find code blocks similar to the query blocks"""
+        logging.info(f"Searching for code similar to {len(query_blocks)} block(s)...")
+        if not query_blocks:
+            return []
+
+        # Get embeddings based on the current backend
+        if self.embedding_model == "sentence_transformers":
+            query_embeddings = self.embedding_backend.encode(query_blocks)
+            stored_embeddings = self.embedding_backend.encode(self.stored_blocks)
+        elif self.embedding_model == "llama_cpp":
+            query_embeddings = np.array([self.embedding_backend.embed(block) for block in query_blocks])
+            stored_embeddings = np.array([self.embedding_backend.embed(block) for block in self.stored_blocks])
+        else:  # TF-IDF
+            vectorizer = self.embedding_backend.fit(self.stored_blocks + query_blocks)
+            all_embeddings = vectorizer.transform(self.stored_blocks + query_blocks).toarray()
+            stored_embeddings = all_embeddings[:len(self.stored_blocks)]
+            query_embeddings = all_embeddings[len(self.stored_blocks):]
+
+        # Calculate similarities
+        similar_blocks = []
+        for i, query_embedding in enumerate(query_embeddings):
+            similarities = cosine_similarity([query_embedding], stored_embeddings)[0]
+            for j, similarity in enumerate(similarities):
+                if similarity > similarity_threshold and i != j:
+                    similar_blocks.append({
+                        'query_block': query_blocks[i],
+                        'similar_block': self.stored_blocks[j],
+                        'similarity': similarity,
+                        'file_path': self.block_files[j]
+                    })
+
+        # Sort by similarity
+        similar_blocks.sort(key=lambda x: x['similarity'], reverse=True)
+
+        # Remove duplicates while preserving order
+        seen = set()
+        unique_blocks = []
+        for block in similar_blocks:
+            block_key = (block['query_block'], block['similar_block'])
+            if block_key not in seen:
+                seen.add(block_key)
+                unique_blocks.append(block)
+
+        logging.info(f"Found {len(unique_blocks)} unique similar code blocks with threshold > {similarity_threshold}.")
+        return unique_blocks
+
+    def update_index(self, code_blocks):
+        """Update the indexed code blocks"""
+        self.stored_blocks = code_blocks
+        self.block_files = []  # Store file paths for each block
+        logging.info(f"Updated code index with {len(code_blocks)} blocks")
 
 class MetricsCollector:
     def __init__(self):
@@ -241,9 +352,215 @@ class RepomixProcessor:
         self.git_automations = {}
         self.metrics = MetricsCollector()
         
+        # Initialize core components
+        self.code_indexer = CodeIndexer(config.get('semantic_search', {}))
+        self.code_preprocessor = self.create_preprocessor()
+        self.intelligent_router = self.create_intelligent_router()
+        self.multi_project_manager = self.create_project_manager()
+        self.llm_client = LLM_Client(config.get('llm_integration', {}))
+        
         # Initialize git automation for each repo
         for repo in config.get('repositories', []):
             self.git_automations[repo['name']] = GitAutomation(config, repo)
+            
+    def create_preprocessor(self):
+        """Create and configure the code preprocessor"""
+        return CodePreprocessor(
+            remove_comments=self.config.get('preprocessing', {}).get('remove_comments', True),
+            remove_whitespace=self.config.get('preprocessing', {}).get('remove_whitespace', True)
+        )
+        
+    def create_intelligent_router(self):
+        """Create and configure the intelligent router"""
+        return IntelligentRouter(
+            thresholds=self.config.get('analysis', {}).get('classification_thresholds', {})
+        )
+        
+    def create_project_manager(self):
+        """Create and configure the multi-project manager"""
+        return MultiProjectManager(
+            auto_discover=self.config.get('multi_project', {}).get('auto_discover', False),
+            max_depth=self.config.get('multi_project', {}).get('max_depth', 2)
+        )
+
+    def run_repomix_analysis(self, repo_path):
+        """Run initial repomix analysis on repository and return the summary"""
+        try:
+            output_dir = Path(repo_path) / '.llmdiver'
+            output_dir.mkdir(exist_ok=True)
+            output_file = output_dir / 'repomix.md'
+            
+            if not output_file.exists():
+                cmd = ['repomix', repo_path, '--output', str(output_file)]
+                result = subprocess.run(cmd, check=True, capture_output=True, text=True)
+                if result.returncode != 0:
+                    logging.error(f"Repomix analysis failed: {result.stderr}")
+                    return None
+            
+            with open(output_file) as f:
+                return f.read()
+                
+        except Exception as e:
+            logging.error(f"Failed to run repomix analysis: {e}")
+            return None
+
+    def analyze_manifest_changes(self, repo_config):
+        """Analyze changes in dependency manifests"""
+        try:
+            repo_path = Path(repo_config['path'])
+            manifest_files = [
+                'package.json',
+                'requirements.txt',
+                'Cargo.toml',
+                'go.mod',
+                'pom.xml',
+                'build.gradle'
+            ]
+            
+            changes = []
+            for manifest in manifest_files:
+                manifest_path = repo_path / manifest
+                if manifest_path.exists():
+                    changes.append(f"Found manifest: {manifest}")
+                    # Add manifest specific analysis here
+                    
+            return "\n".join(changes) if changes else ""
+        except Exception as e:
+            logging.error(f"Failed to analyze manifests: {e}")
+            return ""
+
+
+    def enhanced_repository_analysis(self, repo_config: Dict):
+        """Enhanced analysis including manifests and multi-project context"""
+        logging.info(f"--- Starting Enhanced Analysis for {repo_config['name']} ---")
+
+        try:
+            # Step 1: Run repomix
+            logging.info("Step 1: Running repomix to generate repository summary...")
+            summary = self.run_repomix_analysis(repo_config["path"])
+            if not summary:
+                logging.error("ANALYSIS HALTED: Repomix failed to generate a summary.")
+                return
+            logging.info(f"Repomix summary generated ({len(summary)} characters).")
+
+            # Step 2: Preprocess and index code
+            logging.info("Step 2: Preprocessing code and updating semantic index...")
+            preprocessed_data = self.code_preprocessor.preprocess_repomix_output(summary)
+            self.code_indexer.update_index(preprocessed_data)
+            formatted_summary = self.code_preprocessor.format_for_llm(preprocessed_data)
+            logging.info("Code preprocessing and indexing complete.")
+
+            # Step 3: Get Semantic Context
+            logging.info("Step 3: Performing semantic search for similar code...")
+            semantic_context = self.code_indexer.get_semantic_context(preprocessed_data)
+            if semantic_context:
+                logging.info(f"Semantic context found with {len(semantic_context.split('File:'))-1} similar blocks.")
+            else:
+                logging.info("No semantically similar code found.")
+
+            # Step 4: Analyze Dependencies
+            logging.info("Step 4: Analyzing manifest for dependency changes...")
+            manifest_analysis = self.analyze_manifest_changes(repo_config)
+            if manifest_analysis:
+                logging.info("Dependency changes detected.")
+            else:
+                logging.info("No dependency changes found.")
+
+            # Step 5: Classify code and select prompt
+            logging.info("Step 5: Using intelligent router to classify changes...")
+            project_info = self.multi_project_manager.get_project_manifest_info(repo_config["path"])
+            analysis_type = self.intelligent_router.classify_code_changes(preprocessed_data)
+            if analysis_type == 'general' and manifest_analysis.strip():
+                analysis_type = 'dependency'
+            logging.info(f"Intelligent router selected analysis type: '{analysis_type.upper()}'")
+
+            # Step 6: Construct the final prompt for the LLM
+            logging.info("Step 6: Constructing final prompt for LLM analysis...")
+            enhanced_summary = f"""# Repository Analysis: {repo_config['name']}
+
+## Project Context
+- Primary Language: {project_info['primary_language']}
+- Framework: {project_info['framework']}
+- Manifest Files: {len(project_info['manifests'])}
+
+{manifest_analysis}
+
+{semantic_context}
+
+## Preprocessed Code Analysis
+{formatted_summary}
+
+## Raw Code Data
+{summary}
+
+## Analysis Instructions
+When analyzing this codebase, pay special attention to:
+1. **Dependency Security**: If manifest changes detected, assess security implications of new/removed packages
+2. **Language-Specific Patterns**: Apply {project_info['primary_language']}-specific best practices and common issues
+3. **Code Structure**: Use the preprocessed architecture overview and complexity hotspots to focus analysis
+4. **Code Reuse**: If similar code found, evaluate opportunities for refactoring and deduplication
+"""
+            logging.info(f"Final prompt constructed ({len(enhanced_summary)} characters).")
+
+            # Step 7: Send to LLM for analysis
+            logging.info(f"Step 7: Sending payload to LLM with prompt type '{analysis_type.upper()}'...")
+            analysis = self.llm_client.analyze_repo_summary(enhanced_summary, analysis_type)
+            if "Analysis failed" in analysis or "API error" in analysis:
+                logging.error(f"ANALYSIS HALTED: LLM analysis failed. Response: {analysis}")
+                return
+            logging.info(f"LLM analysis successful ({len(analysis)} characters received).")
+
+            # Step 8: Save results
+            logging.info("Step 8: Saving Markdown report and structured JSON output...")
+            analysis_dir = Path(repo_config["path"]) / ".llmdiver"
+            analysis_dir.mkdir(exist_ok=True)
+
+            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+            analysis_file = analysis_dir / f"enhanced_analysis_{timestamp}.md"
+            json_analysis_file = analysis_dir / f"analysis_data_{timestamp}.json"
+
+            analysis_data = {
+                "metadata": {
+                    "timestamp": datetime.now().isoformat(),
+                    "project_name": repo_config['name'],
+                    "analysis_type": analysis_type
+                },
+                "project_context": {
+                    "primary_language": project_info['primary_language'],
+                    "framework": project_info['framework'],
+                },
+                "code_metrics": preprocessed_data.get('code_metrics', {}),
+                "ai_analysis": {
+                    "raw_text": analysis,
+                    "structured_findings": self._extract_structured_findings(analysis)
+                },
+                "semantic_analysis": {
+                    "has_similar_code": bool(semantic_context.strip()),
+                    "context_text": semantic_context
+                },
+            }
+
+            with open(json_analysis_file, 'w') as f:
+                json.dump(analysis_data, f, indent=2, default=str)
+
+            with open(analysis_file, 'w') as f:
+                f.write(f"# LLMdiver Enhanced Analysis - {datetime.now()}\n\n")
+                f.write(analysis)
+
+            logging.info(f"Saved Markdown to {analysis_file} and JSON to {json_analysis_file}")
+
+            # Step 9: Git Automation
+            if repo_config.get("auto_commit", False):
+                logging.info("Step 9: Performing Git auto-commit operations...")
+                commit_message = f"LLMdiver enhanced analysis for {repo_config['name']}"
+                self.git_automation.auto_commit(repo_config["path"], commit_message)
+            else:
+                logging.info("Step 9: Git auto-commit skipped (disabled for this repository).")
+
+            logging.info(f"--- Analysis for {repo_config['name']} Complete ---")
+
+        except Exception as e:
+            logging.error(f"FATAL ERROR in enhanced_repository_analysis for {repo_config['name']}: {e}", exc_info=True)
 
     def run_analysis(self, repo_path):
         with self.lock:
@@ -496,6 +813,30 @@ class APIHandler(BaseHTTPRequestHandler):
         except Exception as e:
             logger.error(f"Failed to clone repository: {e}")
             raise
+
+def _extract_structured_findings(self, analysis_text: str) -> Dict:
+    """Extract structured findings from analysis text"""
+    findings = {
+        "issues": [],
+        "improvements": [],
+        "security": [],
+        "dependencies": []
+    }
+    
+    current_section = None
+    for line in analysis_text.split('\n'):
+        if '## Issues' in line:
+            current_section = 'issues'
+        elif '## Improvements' in line:
+            current_section = 'improvements'
+        elif '## Security' in line:
+            current_section = 'security'
+        elif '## Dependencies' in line:
+            current_section = 'dependencies'
+        elif line.strip() and current_section and line.startswith('- '):
+            findings[current_section].append(line.strip('- ').strip())
+            
+    return findings
 
 def main():
     # Load configuration

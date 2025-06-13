@@ -16,11 +16,14 @@ from pathlib import Path
 from datetime import datetime
 import psutil
 
+import queue
+
 class LLMdiverMonitor:
     def __init__(self, root):
         self.root = root
         self.root.title("LLMdiver Monitor - AI Code Analysis Dashboard")
         self.root.geometry("1400x900")
+        self.log_queue = queue.Queue()
         
         # Configure style
         style = ttk.Style()
@@ -391,22 +394,36 @@ class LLMdiverMonitor:
             log_file = "llmdiver_daemon.log"
             if not os.path.exists(log_file):
                 return
-                
+
             with open(log_file, 'r') as f:
-                # Go to end of file
-                f.seek(0, 2)
-                
+                f.seek(0, 2)  # Go to end of file
                 while self.log_monitoring:
                     line = f.readline()
                     if line:
-                        self.display_log_line(line.strip())
+                        self.log_queue.put(line)  # Put message in the queue
                     else:
                         time.sleep(0.5)
-        
+
         self.log_monitoring = True
         log_thread = threading.Thread(target=monitor_logs, daemon=True)
         log_thread.start()
+        
+        # Start the queue processor in the main thread
+        self.process_log_queue()
     
+    def process_log_queue(self):
+        """Process log messages from the queue in a thread-safe way."""
+        try:
+            while True:
+                try:
+                    line = self.log_queue.get_nowait()
+                    self.display_log_line(line.strip())
+                except queue.Empty:
+                    break  # Queue is empty, stop processing for now
+        finally:
+            # Schedule the next check
+            self.root.after(100, self.process_log_queue)
+
     def display_log_line(self, line):
         """Display a log line with appropriate formatting"""
         try:
