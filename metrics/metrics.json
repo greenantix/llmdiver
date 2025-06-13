@@ -1,0 +1,22 @@
+{
+  "analysis": {
+    "total_runs": 2,
+    "total_tokens": 594,
+    "avg_duration": 0.3194239139556885,
+    "last_run": "2025-06-12T23:17:42.634286"
+  },
+  "api": {
+    "requests": {},
+    "errors": 0
+  },
+  "git": {
+    "commits": 0,
+    "pushes": 0,
+    "doc_updates": 0
+  },
+  "system": {
+    "cpu_percent": 0.0,
+    "memory_mb": 741.3671875,
+    "disk_usage_mb": 3584.382893562317
+  }
+}

@@ -5,7 +5,7 @@
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd "$SCRIPT_DIR"
 
-DAEMON_SCRIPT="llmdiver_daemon.py"
+DAEMON_SCRIPT="llmdiver-daemon.py"
 PID_FILE="llmdiver.pid"
 LOG_FILE="llmdiver_daemon.log"
 

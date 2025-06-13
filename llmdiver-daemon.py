@@ -470,43 +470,449 @@ class MetricsCollector:
             self.update_system_metrics()
             return self.metrics
 
+class LLMStudioClient:
+    def __init__(self, config):
+        self.config = config
+        self.url = config["llm_integration"]["url"]
+        self.model = config["llm_integration"]["model"]
+        self.specialized_prompts = self._load_specialized_prompts()
+    
+    def chunk_text(self, text: str, chunk_size: int = 16000) -> List[str]:
+        """Split text into chunks that fit within context window"""
+        words = text.split()
+        chunks = []
+        current_chunk = []
+        current_length = 0
+        
+        for word in words:
+            word_length = len(word) + 1  # +1 for space
+            if current_length + word_length > chunk_size and current_chunk:
+                chunks.append(" ".join(current_chunk))
+                current_chunk = [word]
+                current_length = word_length
+            else:
+                current_chunk.append(word)
+                current_length += word_length
+        
+        if current_chunk:
+            chunks.append(" ".join(current_chunk))
+        
+        return chunks
+
+    def _load_specialized_prompts(self) -> Dict:
+        """Load specialized prompt templates for different analysis types"""
+        return {
+            "dependency": """You are a dependency security expert analyzing package and configuration changes. Focus specifically on security, compatibility, and maintenance implications.
+
+**DEPENDENCY ANALYSIS PRIORITY FRAMEWORK:**
+- CRITICAL: Security vulnerabilities, known exploits, malicious packages
+- HIGH: Breaking changes, version conflicts, deprecated packages
+- MEDIUM: Performance impact, bundle size increases, maintenance burden
+- LOW: Minor version updates, documentation improvements
+
+**REQUIRED OUTPUT FORMAT:**
+
+## Executive Summary
+[2-3 sentences: Security risk assessment, compatibility concerns, immediate actions needed]
+
+## Security Assessment (Priority: CRITICAL)
+[Known vulnerabilities, suspicious packages, security advisories - include CVE numbers and severity scores]
+
+## Compatibility & Breaking Changes (Priority: HIGH)
+[Version conflicts, API changes, migration requirements - include specific version numbers]
+
+## Performance & Bundle Impact (Priority: MEDIUM)
+[Size increases, loading performance, runtime impact - provide metrics where possible]
+
+## Maintenance Recommendations (Priority: LOW)
+[Update strategies, alternative packages, long-term dependency health]
+
+**ANALYSIS REQUIREMENTS:**
+- Check against known vulnerability databases
+- Assess package popularity and maintenance status
+- Evaluate licensing compatibility
+- Consider supply chain security risks""",
+
+            "security": """You are a cybersecurity expert conducting a focused security audit. Prioritize identifying vulnerabilities, attack vectors, and security weaknesses.
+
+**SECURITY ANALYSIS PRIORITY FRAMEWORK:**
+- CRITICAL: Remote code execution, privilege escalation, data exposure
+- HIGH: Authentication bypasses, injection vulnerabilities, access control flaws
+- MEDIUM: Information disclosure, CSRF, weak cryptography
+- LOW: Security headers, timing attacks, information leakage
+
+**REQUIRED OUTPUT FORMAT:**
+
+## Executive Summary
+[2-3 sentences: Most critical vulnerabilities found, attack surface assessment, immediate security actions]
+
+## Critical Vulnerabilities (Priority: CRITICAL)
+[Remote exploits, privilege escalation, data breaches - include attack scenarios and file:line references]
+
+## Authentication & Authorization Issues (Priority: HIGH)
+[Access control flaws, session management, privilege boundaries - provide exploit examples]
+
+## Input Validation & Injection Risks (Priority: MEDIUM)
+[SQL injection, XSS, command injection, deserialization - include vulnerable code snippets]
+
+## Security Configuration & Headers (Priority: LOW)
+[Missing headers, weak configurations, information disclosure - provide configuration fixes]
+
+**ANALYSIS REQUIREMENTS:**
+- Include OWASP Top 10 assessment
+- Provide proof-of-concept exploit code where applicable
+- Reference security standards and best practices
+- Assess impact and likelihood for each finding""",
+
+            "general": """You are a principal software architect and security expert conducting a comprehensive code review for maintainability, security, and performance. Your analysis will be used by development teams to prioritize technical improvements.
+
+**ANALYSIS PRIORITY FRAMEWORK:**
+- CRITICAL: Security vulnerabilities, data leaks, system crashes
+- HIGH: Performance bottlenecks, architectural violations, breaking changes
+- MEDIUM: Code maintainability issues, technical debt, missing tests
+- LOW: Style inconsistencies, minor optimizations, documentation gaps
+
+**REQUIRED OUTPUT FORMAT:**
+
+## Executive Summary
+[3-4 sentence overview of codebase health, most critical findings, and recommended immediate actions]
+
+## Critical Issues (Priority: CRITICAL)
+[Security vulnerabilities, potential crashes, data exposure risks - include code snippets and file:line references]
+
+## High Priority Concerns (Priority: HIGH)  
+[Performance bottlenecks, architectural problems, breaking changes - include specific examples]
+
+## Technical Debt & TODOs (Priority: MEDIUM)
+[TODO/FIXME items, mock implementations, maintainability issues - provide file locations]
+
+## Dead Code & Optimization (Priority: LOW)
+[Unused functions, redundant code, minor optimizations - include removal suggestions]
+
+## Actionable Recommendations
+[Specific, prioritized action items with estimated impact and effort]
+
+**ANALYSIS REQUIREMENTS:**
+- Provide file:line references for all findings
+- Include relevant code snippets for context
+- Prioritize findings by business impact and security risk
+- Focus on actionable recommendations, not theoretical issues
+- Consider the project's architecture and technology stack"""
+        }
+
+    def analyze_repo_summary(self, summary_text: str, analysis_type: str = "general") -> str:
+        """Send repo summary to LM Studio for analysis with auto-chunking"""
+        system_prompt = self.specialized_prompts.get(analysis_type, self.specialized_prompts["general"])
+
+        # Check if chunking is enabled and needed
+        enable_chunking = self.config["llm_integration"].get("enable_chunking", False)
+        chunk_size = self.config["llm_integration"].get("chunk_size", 16000)
+        
+        if enable_chunking and len(summary_text) > chunk_size:
+            logging.info(f"Large repository detected ({len(summary_text)} chars), using chunking...")
+            chunks = self.chunk_text(summary_text, chunk_size)
+            all_analyses = []
+            
+            for i, chunk in enumerate(chunks):
+                logging.info(f"Analyzing chunk {i+1}/{len(chunks)}")
+                chunk_prompt = f"Analyze this repository section ({i+1}/{len(chunks)}):\n\n{chunk}"
+                
+                analysis = self._send_single_request(system_prompt, chunk_prompt)
+                if analysis.startswith("Analysis failed:") or analysis.startswith("LM Studio API error:"):
+                    return analysis  # Return error immediately
+                
+                all_analyses.append(f"## Chunk {i+1}/{len(chunks)} Analysis\n{analysis}")
+            
+            # Combine analyses
+            combined = "\n\n".join(all_analyses)
+            
+            # Send combined analysis for final summary
+            final_prompt = f"Summarize and consolidate these code audit findings:\n\n{combined}"
+            return self._send_single_request(
+                "You are consolidating multiple code audit reports. Combine similar findings and prioritize the most critical issues.",
+                final_prompt
+            )
+        else:
+            # Single request for small repositories
+            return self._send_single_request(system_prompt, f"Analyze this repository:\n\n{summary_text}")
+    
+    def _send_single_request(self, system_prompt: str, user_prompt: str) -> str:
+        """Send a single request to LM Studio"""
+        payload = {
+            "model": self.model,
+            "messages": [
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": user_prompt}
+            ],
+            "temperature": self.config["llm_integration"]["temperature"],
+            "max_tokens": self.config["llm_integration"]["max_tokens"],
+            "stream": False
+        }
+        
+        try:
+            import requests
+            response = requests.post(self.url, json=payload, timeout=300)  # 5 minutes
+            response.raise_for_status()
+            result = response.json()
+            return result["choices"][0]["message"]["content"]
+        except Exception as e:
+            logging.error(f"LM Studio API error: {e}")
+            return f"Analysis failed: {e}"
+
+class IntelligentRouter:
+    """Intelligent router that classifies code and selects specialized prompts"""
+    
+    def __init__(self, llm_client):
+        self.llm_client = llm_client
+        self.classification_prompt = """You are a code classification expert. Analyze the provided code snippet and classify its primary purpose.
+
+Respond with ONLY ONE WORD from this list:
+- Security (authentication, authorization, encryption, validation)
+- UI (user interface, components, styling, frontend)
+- Data (database, schemas, queries, data processing)
+- Config (configuration, deployment, infrastructure, environment)
+- API (endpoints, routes, web services, networking)
+- Testing (tests, mocks, fixtures, validation)
+- Utility (helpers, utils, common functions)
+- Business (domain logic, workflows, rules)
+
+Analyze this code and respond with the single most appropriate classification:
+
+"""
+    
+    def classify_code_changes(self, preprocessed_data: Dict) -> str:
+        """Classify the primary type of code changes using LLM"""
+        
+        if not preprocessed_data.get('files'):
+            return "general"
+        
+        # Extract representative code samples
+        code_samples = []
+        file_extensions = []
+        
+        for file_analysis in preprocessed_data['files'][:5]:  # Analyze top 5 files
+            file_path = file_analysis['path']
+            file_extensions.append(file_path.split('.')[-1] if '.' in file_path else '')
+            
+            # Get sample code from functions and classes
+            for func in file_analysis['code_blocks']['functions'][:2]:
+                code_samples.append(func.get('content', ''))
+            
+            for cls in file_analysis['code_blocks']['classes'][:1]:
+                code_samples.append(cls.get('content', ''))
+        
+        if not code_samples:
+            return self._classify_by_file_patterns(preprocessed_data)
+        
+        # Create classification prompt with code samples
+        combined_code = '\n\n'.join(code_samples[:3])  # Use top 3 samples
+        
+        # Limit code length for classification
+        if len(combined_code) > 2000:
+            combined_code = combined_code[:2000] + "..."
+        
+        classification_query = self.classification_prompt + combined_code
+        
+        try:
+            # Use a simple classification request
+            classification = self._classify_with_llm(classification_query)
+            
+            # Map classification to analysis types
+            classification_mapping = {
+                'security': 'security',
+                'ui': 'ui', 
+                'data': 'data',
+                'config': 'config',
+                'api': 'general',  # Use general for API
+                'testing': 'general',  # Use general for testing
+                'utility': 'general',  # Use general for utility
+                'business': 'general'  # Use general for business logic
+            }
+            
+            result = classification_mapping.get(classification.lower(), 'general')
+            logging.info(f"Intelligent router classified code as: {classification} -> {result}")
+            return result
+            
+        except Exception as e:
+            logging.warning(f"Router classification failed, falling back to pattern matching: {e}")
+            return self._classify_by_file_patterns(preprocessed_data)
+    
+    def _classify_with_llm(self, prompt: str) -> str:
+        """Send classification request to LLM"""
+        payload = {
+            "model": self.llm_client.model,
+            "messages": [
+                {"role": "user", "content": prompt}
+            ],
+            "temperature": 0.1,  # Low temperature for consistent classification
+            "max_tokens": 10,    # Very short response expected
+            "stream": False
+        }
+        
+        try:
+            import requests
+            response = requests.post(self.llm_client.url, json=payload, timeout=30)
+            response.raise_for_status()
+            result = response.json()
+            classification = result["choices"][0]["message"]["content"].strip().lower()
+            
+            # Extract single word classification
+            valid_classifications = ['security', 'ui', 'data', 'config', 'api', 'testing', 'utility', 'business']
+            for valid_class in valid_classifications:
+                if valid_class in classification:
+                    return valid_class
+            
+            return 'general'
+            
+        except Exception as e:
+            logging.error(f"LLM classification request failed: {e}")
+            raise
+    
+    def _classify_by_file_patterns(self, preprocessed_data: Dict) -> str:
+        """Fallback classification based on file patterns and extensions"""
+        
+        file_paths = [f['path'] for f in preprocessed_data.get('files', [])]
+        
+        # Count file types
+        security_count = sum(1 for path in file_paths if any(keyword in path.lower() for keyword in 
+                           ['auth', 'login', 'password', 'token', 'security', 'crypto', 'encrypt', 'ssl', 'cert']))
+        
+        ui_count = sum(1 for path in file_paths if any(ext in path.lower() for ext in 
+                      ['.jsx', '.tsx', '.vue', '.html', '.css', '.scss', '.sass', '.less', '.component']))
+        
+        config_count = sum(1 for path in file_paths if any(keyword in path.lower() for keyword in 
+                         ['config', 'env', 'docker', 'kubernetes', 'terraform', '.yml', '.yaml', '.ini', '.conf', 'deploy']))
+        
+        data_count = sum(1 for path in file_paths if any(keyword in path.lower() for keyword in 
+                        ['model', 'schema', 'migration', 'database', 'sql', 'query', 'orm', 'repository']))
+        
+        # Determine dominant pattern
+        pattern_counts = {
+            'security': security_count,
+            'ui': ui_count,
+            'config': config_count,
+            'data': data_count
+        }
+        
+        max_pattern = max(pattern_counts.items(), key=lambda x: x[1])
+        
+        if max_pattern[1] > 0:  # At least one matching file
+            logging.info(f"Pattern-based classification: {max_pattern[0]} ({max_pattern[1]} files)")
+            return max_pattern[0]
+        
+        return 'general'
+
+class MultiProjectManager:
+    """Manages multiple projects for analysis"""
+    
+    def __init__(self, config):
+        self.config = config.get("multi_project", {})
+        self.projects_root = Path(self.config.get("projects_root", "/home/greenantix/AI"))
+        self.discovery_patterns = self.config.get("discovery_patterns", [".git"])
+        self.exclude_paths = self.config.get("exclude_paths", [])
+    
+    def discover_projects(self) -> List[Dict]:
+        """Automatically discover projects in the projects root"""
+        if not self.config.get("auto_discover", False):
+            return []
+        
+        projects = []
+        
+        try:
+            for item in self.projects_root.iterdir():
+                if not item.is_dir():
+                    continue
+                    
+                # Skip excluded paths
+                if any(exclude in str(item) for exclude in self.exclude_paths):
+                    continue
+                
+                # Check for discovery patterns
+                for pattern in self.discovery_patterns:
+                    pattern_path = item / pattern
+                    if pattern_path.exists():
+                        project_config = {
+                            "name": item.name,
+                            "path": str(item),
+                            "auto_commit": False,  # Conservative default
+                            "auto_push": False,
+                            "analysis_triggers": ["*.py", "*.js", "*.ts", "*.sh", "*.md"],
+                            "commit_threshold": 5,
+                            "discovered": True
+                        }
+                        projects.append(project_config)
+                        break
+            
+        except Exception as e:
+            logging.error(f"Failed to discover projects: {e}")
+        
+        return projects
+    
+    def get_project_manifest_info(self, project_path: str) -> Dict:
+        """Get manifest information for a project"""
+        manifest_files = ["package.json", "requirements.txt", "Cargo.toml", "pom.xml", "build.gradle"]
+        manifests = []
+        
+        info = {
+            "project_path": project_path,
+            "manifests": manifests,
+            "primary_language": "unknown",
+            "framework": "unknown"
+        }
+        
+        project_path_obj = Path(project_path)
+        for manifest_file in manifest_files:
+            manifest_path = project_path_obj / manifest_file
+            if manifest_path.exists():
+                manifests.append({"file": manifest_file, "path": str(manifest_path)})
+                
+                # Determine primary language/framework
+                if "package.json" in manifest_file:
+                    info["primary_language"] = "javascript"
+                elif "requirements.txt" in manifest_file or "pyproject.toml" in manifest_file:
+                    info["primary_language"] = "python"
+                elif "Cargo.toml" in manifest_file:
+                    info["primary_language"] = "rust"
+                elif "pom.xml" in manifest_file:
+                    info["primary_language"] = "java"
+                elif "build.gradle" in manifest_file:
+                    info["primary_language"] = "kotlin"
+        
+        return info
+
 class RepomixProcessor:
     def __init__(self, config):
         self.config = config
         self.lock = Lock()
         self.git_automations = {}
         self.metrics = MetricsCollector()
-        
-        # Initialize core components
-        self.code_indexer = CodeIndexer(config.get('semantic_search', {}))
-        self.code_preprocessor = self.create_preprocessor()
-        self.intelligent_router = self.create_intelligent_router()
-        self.multi_project_manager = self.create_project_manager()
-        self.llm_client = LLM_Client(config.get('llm_integration', {})) # Assuming LLM_Client class exists
-        
-        # Initialize git automation for each repo
-        for repo in config.get('repositories', []):
-            self.git_automations[repo['name']] = GitAutomation(config, repo)
-            
-    def create_preprocessor(self):
-        """Create and configure the code preprocessor"""
-        return CodePreprocessor(
+
+        # --- FIX STARTS HERE ---
+        # Directly instantiate the classes we just copied into this file.
+        # This resolves the "is not defined" errors.
+
+        # Use the existing LLMStudioClient class for LLM communication
+        self.llm_client = LLMStudioClient(self.config) 
+
+        # Instantiate the preprocessor
+        self.code_preprocessor = CodePreprocessor(
             remove_comments=self.config.get('preprocessing', {}).get('remove_comments', True),
             remove_whitespace=self.config.get('preprocessing', {}).get('remove_whitespace', True)
         )
-        
-    def create_intelligent_router(self):
-        """Create and configure the intelligent router"""
-        return IntelligentRouter(
-            thresholds=self.config.get('analysis', {}).get('classification_thresholds', {})
-        )
-        
-    def create_project_manager(self):
-        """Create and configure the multi-project manager"""
-        return MultiProjectManager(
-            auto_discover=self.config.get('multi_project', {}).get('auto_discover', False),
-            max_depth=self.config.get('multi_project', {}).get('max_depth', 2)
-        )
+
+        # Instantiate the semantic indexer
+        self.code_indexer = CodeIndexer(config.get('semantic_search', {}))
+
+        # Instantiate the intelligent router, passing the llm_client to it
+        self.intelligent_router = IntelligentRouter(self.llm_client)
+
+        # Instantiate the multi-project manager
+        self.multi_project_manager = MultiProjectManager(config.get('multi_project', {}))
+        # --- FIX ENDS HERE ---
+
+        # Initialize git automation for each repo
+        for repo in config.get('repositories', []):
+            self.git_automations[repo['name']] = GitAutomation(config, repo)
 
     def run_repomix_analysis(self, repo_path):
         """Run initial repomix analysis on repository and return the summary"""
@@ -844,4 +1250,40 @@ class FileChangeHandler(FileSystemEventHandler):
             return
 
         self.last_run = current_time
-        repo_path = os
+        repo_path = os.path.dirname(event.src_path)
+        
+        # Find the repository config that matches this path
+        for repo_config in self.processor.config.get('repositories', []):
+            if Path(repo_path).resolve().is_relative_to(Path(repo_config['path']).resolve()):
+                logger.info(f"Scheduling analysis for {repo_config['name']} due to file change")
+                self.processor.run_analysis(repo_config['path'])
+                break
+
+def main():
+    """Main entry point for the daemon"""
+    config = Config()
+    processor = RepomixProcessor(config.config)
+    
+    # Set up file watching
+    observer = Observer()
+    for repo_config in config.config.get('repositories', []):
+        if os.path.exists(repo_config['path']):
+            handler = FileChangeHandler(processor)
+            observer.schedule(handler, repo_config['path'], recursive=True)
+            logger.info(f"Watching {repo_config['name']} at {repo_config['path']}")
+    
+    observer.start()
+    
+    try:
+        logger.info("LLMdiver daemon started successfully")
+        while True:
+            time.sleep(1)
+    except KeyboardInterrupt:
+        logger.info("Stopping daemon...")
+        observer.stop()
+    
+    observer.join()
+    logger.info("LLMdiver daemon stopped")
+
+if __name__ == "__main__":
+    main()
