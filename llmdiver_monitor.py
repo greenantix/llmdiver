@@ -36,6 +36,7 @@ class LLMdiverMonitor:
         self.log_monitoring = False
         self.config_path = "config/llmdiver.json"
         self.pid_file = "llmdiver.pid"
+        self.last_analysis_timestamp = None
         
         # Create main interface
         self.setup_interface()
@@ -118,8 +119,11 @@ class LLMdiverMonitor:
         self.restart_btn = ttk.Button(button_frame, text="🔄 Restart", command=self.restart_daemon)
         self.restart_btn.pack(side=tk.LEFT, padx=5)
         
-        self.analyze_btn = ttk.Button(button_frame, text="🔍 Force Analysis", command=self.force_analysis)
-        self.analyze_btn.pack(side=tk.LEFT, padx=5)
+        self.smart_analyze_btn = ttk.Button(button_frame, text="🔍 Check Analysis State", command=self.smart_analysis_trigger)
+        self.smart_analyze_btn.pack(side=tk.LEFT, padx=5)
+
+        self.deep_analyze_btn = ttk.Button(button_frame, text="🧠 Full Deep Analysis", command=self.force_deep_analysis)
+        self.deep_analyze_btn.pack(side=tk.LEFT, padx=5)
         
         # Progress indicator
         self.progress = ttk.Progressbar(control_frame, mode='indeterminate')
@@ -314,13 +318,6 @@ class LLMdiverMonitor:
             "Failed to restart daemon."
         )
     
-    def force_analysis(self):
-        """Force a manual analysis run"""
-        self.run_command_in_thread(
-            ["./run_llm_audit.sh"],
-            "Manual analysis completed successfully.",
-            "Manual analysis failed."
-        )
     
     def run_command_in_thread(self, command: list, success_msg: str, failure_msg: str):
         """Run a shell command in a background thread to prevent GUI freezing."""
@@ -347,6 +344,12 @@ class LLMdiverMonitor:
         try:
             message, show_error_popup = self.command_queue.get_nowait()
             self.log_message(message)
+
+            # Check if analysis was successful to update state
+            if "analysis complete" in message.lower() and "failed" not in message.lower():
+                self.last_analysis_timestamp = datetime.now()
+                self.smart_analyze_btn.config(text="✅ Continue Analysis")
+
             if show_error_popup:
                 messagebox.showerror("Command Error", message)
             self.progress.stop()
@@ -391,20 +394,6 @@ class LLMdiverMonitor:
         time.sleep(2)
         self.start_daemon()
     
-    def force_analysis(self):
-        """Force a manual analysis run"""
-        try:
-            self.log_message("🔍 Triggering manual analysis...")
-            result = subprocess.run(["./run_llm_audit.sh"], capture_output=True, text=True, timeout=300)
-            
-            if result.returncode == 0:
-                self.log_message("✅ Manual analysis completed")
-                self.refresh_results()
-            else:
-                self.log_message(f"❌ Analysis failed: {result.stderr}")
-                
-        except Exception as e:
-            self.log_message(f"❌ Error running analysis: {e}")
     
     def check_daemon_status(self):
         """Check if the daemon is running"""
@@ -462,6 +451,7 @@ class LLMdiverMonitor:
             while True:
                 # Use a queue or thread-safe call to update GUI from thread
                 self.root.after(0, self.update_dashboard)
+                self.root.after(0, self.update_analysis_button_state)  # Add this
                 time.sleep(5)  # Update every 5 seconds
 
         monitor_thread = threading.Thread(target=monitor, daemon=True)
@@ -741,6 +731,15 @@ class LLMdiverMonitor:
                 stats.append(("Total Functions Found", metrics.get("total_functions", 0), timestamp))
                 stats.append(("Total Classes Found", metrics.get("total_classes", 0), timestamp))
 
+                # --- NEW SEMANTIC STATS ---
+                semantic_info = data.get("semantic_analysis", {})
+                if semantic_info.get("has_similar_code"):
+                    blocks_found = semantic_info.get("similar_blocks_found", 0)
+                    stats.append(("Semantic Search", f"✅ Found {blocks_found} similar blocks", timestamp))
+                else:
+                    stats.append(("Semantic Search", "ℹ️ No similar code found", timestamp))
+                # --- END NEW STATS ---
+
                 crit_count = len(findings.get("critical_issues", []))
                 high_count = len(findings.get("high_priority", []))
                 stats.append(("Critical/High Issues", f"{crit_count} / {high_count}", timestamp))
@@ -889,6 +888,46 @@ class LLMdiverMonitor:
             f"Analysis completed for {repo_path}.",
             f"Analysis failed for {repo_path}."
         )
+
+    def smart_analysis_trigger(self):
+        """Intelligently decides whether to run a new analysis or continue from a recent one."""
+        if self.last_analysis_timestamp:
+            time_since_last = datetime.now() - self.last_analysis_timestamp
+            # If the last analysis was less than 2 hours ago
+            if time_since_last.total_seconds() < 7200:
+                if messagebox.askyesno("Continue Analysis?",
+                                     f"A recent analysis was completed at {self.last_analysis_timestamp.strftime('%H:%M:%S')}.\n\n"
+                                     "Would you like to run a fresh analysis on only the files changed since then?"):
+                    self.log_message("🚀 Triggering incremental analysis...")
+                    self.run_command_in_thread(["./run_llm_audit.sh", "--fast"], "Incremental analysis complete.", "Incremental analysis failed.")
+                else:
+                    self.log_message("ℹ️ User opted not to continue analysis.")
+            else:
+                self.force_standard_analysis()
+        else:
+            self.force_standard_analysis()
+
+    def force_standard_analysis(self):
+        self.log_message("🚀 Triggering a fresh standard analysis...")
+        if messagebox.askokcancel("Confirm Analysis", "This will perform a standard analysis of the project. This may take several minutes. Continue?"):
+            self.run_command_in_thread(["./run_llm_audit.sh"], "Standard analysis complete.", "Standard analysis failed.")
+
+    def force_deep_analysis(self):
+        self.log_message("🧠 Triggering a full deep analysis...")
+        if messagebox.askokcancel("Confirm DEEP Analysis", "WARNING: A deep analysis is resource-intensive and can take a significant amount of time.\n\nAre you sure you want to proceed?"):
+            self.run_command_in_thread(["./run_llm_audit.sh", "--deep"], "Deep analysis complete.", "Deep analysis failed.")
+
+    def update_analysis_button_state(self):
+        """Checks for recent analysis files and updates the GUI button."""
+        try:
+            latest_json = max(Path(".").glob("**/analysis_data_*.json"), key=os.path.getctime, default=None)
+            if latest_json:
+                self.last_analysis_timestamp = datetime.fromtimestamp(os.path.getctime(latest_json))
+                self.smart_analyze_btn.config(text="✅ Continue Analysis")
+            else:
+                self.smart_analyze_btn.config(text="🚀 Run New Analysis")
+        except Exception:
+            self.smart_analyze_btn.config(text="🚀 Run New Analysis")
 
 def main():
     """Main function to run the LLMdiver Monitor"""

@@ -5,6 +5,23 @@
 
 set -e
 
+# --- START OF NEW CLEANUP LOGIC ---
+REPO_PATH_CLEANUP="" # Global variable for the trap
+
+function cleanup_gitignore() {
+  if [[ -n "$REPO_PATH_CLEANUP" && -f "$REPO_PATH_CLEANUP/.gitignore.backup" ]]; then
+    echo "🧹 Restoring original .gitignore..."
+    mv "$REPO_PATH_CLEANUP/.gitignore.backup" "$REPO_PATH_CLEANUP/.gitignore"
+  fi
+  if [[ -n "$REPO_PATH_CLEANUP" && -f "$REPO_PATH_CLEANUP/.gitignore.llmdiver" ]]; then
+    rm "$REPO_PATH_CLEANUP/.gitignore.llmdiver"
+  fi
+}
+
+# Set trap to run cleanup on EXIT, INTERRUPT, or TERM signals
+trap cleanup_gitignore EXIT INT TERM
+# --- END OF NEW CLEANUP LOGIC ---
+
 # Check for required tools
 if ! command -v jq &> /dev/null; then
     echo "❌ Error: jq is required but not installed"
@@ -59,6 +76,7 @@ done
 
 # Fallback to current directory if no path specified
 [[ -z "$REPO_PATH" ]] && REPO_PATH="$(pwd)"
+REPO_PATH_CLEANUP="$REPO_PATH" # Set the global for the trap
 
 if [[ ! -d "$REPO_PATH" ]]; then
     echo "❌ Error: Target directory not found: $REPO_PATH"
@@ -113,7 +131,7 @@ else
     echo "🔍 Standard audit - full summary + LLM analysis"
 fi
 
-# Create gitignore backup and LLMdiver-specific ignore
+# Backup original .gitignore if it exists
 if [[ -f "$REPO_PATH/.gitignore" ]]; then
     cp "$REPO_PATH/.gitignore" "$REPO_PATH/.gitignore.backup"
 fi
@@ -144,10 +162,8 @@ repomix "$REPO_PATH" \
   --include "*.py,*.js,*.ts,*.jsx,*.tsx,*.sh" \
   --token-count-encoding cl100k_base
 
-# Restore original gitignore
-if [[ -f "$REPO_PATH/.gitignore.backup" ]]; then
-    mv "$REPO_PATH/.gitignore.backup" "$REPO_PATH/.gitignore"
-fi
+# The 'trap' will automatically handle the cleanup of .gitignore.backup
+# and .gitignore.llmdiver, so we don't need manual cleanup commands here.
 
 echo "✅ Repomix summary created: $SUMMARY_FILE"
 

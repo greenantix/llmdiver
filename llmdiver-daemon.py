@@ -85,8 +85,41 @@ class GitAutomation:
             
         return template.format(summary=summary, details=details)
 
+    def auto_commit(self, analysis_file_path: Path, json_analysis_path: Path, analysis_data: Dict):
+        """Perform git operations, including documentation updates."""
+        if not self.config['enabled'] or not self.repo_config['auto_commit']:
+            logging.info(f"Git auto-commit skipped (disabled for this repository).")
+            return
+
+        with self.lock:
+            try:
+                # 1. Update the core documentation from the analysis results
+                doc_path = self.update_documentation(analysis_data)
+
+                # 2. Stage the analysis files and the updated documentation
+                files_to_add = [str(analysis_file_path), str(json_analysis_path)]
+                if doc_path and doc_path.exists():
+                    files_to_add.append(str(doc_path))
+
+                logging.info(f"Staging files for commit: {files_to_add}")
+                self.repo.index.add(files_to_add)
+
+                # 3. Generate a detailed commit message
+                commit_message = self.generate_commit_message_from_data(analysis_data)
+                self.repo.index.commit(commit_message)
+                logging.info(f"✅ Successfully created commit: {commit_message.splitlines()[0]}")
+
+                # 4. Push if configured
+                if self.config.get('auto_push', False) and self.repo_config.get('auto_push', False):
+                    logging.info("Attempting to push to remote...")
+                    self.repo.remote().push()
+                    logging.info("✅ Successfully pushed changes to remote.")
+
+            except Exception as e:
+                logging.error(f"❌ Git automation failed: {e}", exc_info=True)
+
     def commit_and_push(self, changed_files, analysis_result):
-        """Perform git operations with locking"""
+        """Legacy method for backwards compatibility"""
         with self.lock:
             try:
                 # Stage files
@@ -104,12 +137,57 @@ class GitAutomation:
 
                 # Update documentation if enabled
                 if self.config['documentation_update']:
-                    self.update_documentation()
+                    self.update_documentation_legacy()
                     
             except Exception as e:
                 logger.error(f"Git automation failed: {e}")
 
-    def update_documentation(self):
+    def generate_commit_message_from_data(self, analysis_data: Dict) -> str:
+        """Create a detailed commit message from structured analysis data."""
+        template = self.config.get('commit_message_template', "🤖 LLMdiver Analysis: {summary}")
+        findings = analysis_data.get("ai_analysis", {}).get("structured_findings", {})
+
+        crit_count = len(findings.get("critical_issues", []))
+        high_count = len(findings.get("high_priority", []))
+        med_count = len(findings.get("medium_priority", []))
+
+        summary = f"Found {crit_count} critical, {high_count} high, {med_count} medium issues."
+        details = findings.get('executive_summary', 'No executive summary provided.')
+
+        return template.format(summary=summary, details=details)
+
+    def update_documentation(self, analysis_data: Dict) -> Path:
+        """Generate and update the main analysis documentation file."""
+        docs_path = Path(self.repo_config['path']) / '.llmdiver'
+        docs_path.mkdir(exist_ok=True)
+        doc_file = docs_path / 'llmdiver_analysis.md'
+
+        logging.info(f"Updating documentation at {doc_file}...")
+
+        with open(doc_file, 'w') as f:
+            f.write(f"# LLMdiver Code Health Report: {self.repo_config['name']}\n")
+            f.write(f"**Last Updated:** {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n\n")
+
+            findings = analysis_data.get("ai_analysis", {}).get("structured_findings", {})
+            f.write("## Executive Summary\n")
+            f.write(f"{findings.get('executive_summary', 'Not available.')}\n\n")
+
+            for key, name in [
+                ('critical_issues', 'Critical Issues'),
+                ('high_priority', 'High Priority Issues'),
+                ('medium_priority', 'Medium Priority Issues'),
+            ]:
+                items = findings.get(key, [])
+                if items:
+                    f.write(f"### {name} ({len(items)})\n")
+                    for item in items:
+                        f.write(f"- {item.strip()}\n")
+                    f.write("\n")
+        
+        logging.info("Documentation update complete.")
+        return doc_file
+
+    def update_documentation_legacy(self):
         """Generate and commit documentation updates"""
         docs_path = Path(self.repo_config['path']) / 'docs'
         docs_path.mkdir(exist_ok=True)
@@ -235,17 +313,27 @@ class CodePreprocessor:
     def format_for_llm(self, preprocessed_data: Dict) -> str:
         """Format preprocessed data for LLM consumption"""
         output = []
-        metrics = preprocessed_data['metrics']
+        metrics = preprocessed_data.get('metrics', {})
+        files = preprocessed_data.get('files', [])
 
         output.append("## Project Metrics")
-        output.append(f"- Total Files: {metrics['total_files']}")
-        output.append(f"- Total Code Size: {metrics['total_size']} characters")
-        output.append(f"- Average File Size: {metrics['average_file_size']:.1f} characters")
-        output.append(f"- Languages: {', '.join(metrics['languages'])}")
+        output.append(f"- Total Files: {metrics.get('total_files', 0)}")
+        output.append(f"- Total Code Size: {metrics.get('total_size', 0)} characters")
+        output.append(f"- Average File Size: {metrics.get('average_file_size', 0):.1f} characters")
+        output.append(f"- Languages: {', '.join(metrics.get('languages', ['unknown']))}")
         output.append("")
 
+        if not files:
+            output.append("## File Analysis")
+            output.append("No valid code files found for analysis. This may indicate:")
+            output.append("- Repository contains only configuration or documentation files")
+            output.append("- File patterns in repomix configuration are too restrictive")
+            output.append("- All code files are being filtered out by ignore patterns")
+            output.append("")
+            return '\n'.join(output)
+
         output.append("## File Analysis")
-        for file_data in preprocessed_data['files']:
+        for file_data in files:
             output.append(f"### {file_data['path']}")
             output.append(f"- Language: {file_data['language']}")
             output.append(f"- Size: {file_data['size']} characters")
@@ -351,6 +439,47 @@ class CodeIndexer:
         self.stored_blocks = code_blocks
         self.block_files = []  # Store file paths for each block
         logging.info(f"Updated code index with {len(code_blocks)} blocks")
+
+    def get_semantic_context(self, preprocessed_data):
+        """Get semantic context by finding similar code patterns"""
+        try:
+            files = preprocessed_data.get('files', [])
+            if not files:
+                return ""
+            
+            # Extract code blocks from files
+            all_blocks = []
+            for file_data in files:
+                content = file_data.get('content', '')
+                if content.strip():
+                    all_blocks.append(content)
+            
+            if len(all_blocks) < 2:
+                return ""
+            
+            # Find similar code using the first block as query
+            similar_results = self.find_similar_code([all_blocks[0]], similarity_threshold=0.3)
+            
+            if not similar_results:
+                return ""
+            
+            # Format results
+            context_lines = ["## Semantic Code Analysis", ""]
+            context_lines.append(f"Found {len(similar_results)} similar code patterns:")
+            
+            for i, result in enumerate(similar_results[:3]):  # Top 3 results
+                context_lines.append(f"### Similar Block {i+1} (Score: {result['similarity']:.2f})")
+                context_lines.append(f"File: {result.get('file_path', 'Unknown')}")
+                context_lines.append("```")
+                context_lines.append(result['similar_block'][:200] + "..." if len(result['similar_block']) > 200 else result['similar_block'])
+                context_lines.append("```")
+                context_lines.append("")
+            
+            return "\n".join(context_lines)
+            
+        except Exception as e:
+            logging.error(f"Error in get_semantic_context: {e}")
+            return ""
 
 class MetricsCollector:
     def __init__(self):
@@ -694,12 +823,11 @@ Analyze this code and respond with the single most appropriate classification:
             file_path = file_analysis['path']
             file_extensions.append(file_path.split('.')[-1] if '.' in file_path else '')
             
-            # Get sample code from functions and classes
-            for func in file_analysis['code_blocks']['functions'][:2]:
-                code_samples.append(func.get('content', ''))
-            
-            for cls in file_analysis['code_blocks']['classes'][:1]:
-                code_samples.append(cls.get('content', ''))
+            # Get sample code from file content directly
+            content = file_analysis.get('content', '')
+            if content.strip():
+                # Take a representative sample of the file content
+                code_samples.append(content[:1000])  # First 1000 chars as sample
         
         if not code_samples:
             return self._classify_by_file_patterns(preprocessed_data)
@@ -921,12 +1049,37 @@ class RepomixProcessor:
             output_dir.mkdir(exist_ok=True)
             output_file = output_dir / 'repomix.md'
             
-            if not output_file.exists():
-                cmd = ['repomix', repo_path, '--output', str(output_file)]
-                result = subprocess.run(cmd, check=True, capture_output=True, text=True)
-                if result.returncode != 0:
-                    logging.error(f"Repomix analysis failed: {result.stderr}")
-                    return None
+            # Always regenerate to get fresh analysis
+            repomix_config = self.config['repomix']
+            
+            # Use simpler command with key patterns only
+            cmd = [
+                'repomix', repo_path,
+                '--output', str(output_file),
+                '--style', 'markdown',
+                '--include', '*.py',
+                '--include', '*.js', 
+                '--include', '*.ts',
+                '--include', '*.sh',
+                '--ignore', '*.md',
+                '--ignore', '*.log', 
+                '--ignore', '*test*.py',
+                '--ignore', 'node_modules',
+                '--ignore', '__pycache__',
+                '--ignore', '.git',
+                '--ignore', '.llmdiver'
+            ]
+
+            if repomix_config.get('compress', False):
+                cmd.append('--compress')
+            if repomix_config.get('remove_empty_lines', False):
+                cmd.append('--remove-empty-lines')
+
+            logging.info(f"Running repomix with command: {' '.join(cmd)}")
+            result = subprocess.run(cmd, check=True, capture_output=True, text=True)
+            if result.returncode != 0:
+                logging.error(f"Repomix analysis failed: {result.stderr}")
+                return None
             
             with open(output_file) as f:
                 return f.read()
@@ -1124,9 +1277,10 @@ class RepomixProcessor:
                     "raw_text": analysis,
                     "structured_findings": self._extract_structured_findings(analysis)
                 },
-                "semantic_analysis": {
+                "semantic_analysis": { # <-- VERIFY AND ENHANCE THIS BLOCK
                     "has_similar_code": bool(semantic_context.strip()),
-                    "context_text": semantic_context
+                    "similar_blocks_found": len(semantic_context.split('File:')) - 1 if semantic_context.strip() else 0,
+                    "context_text": semantic_context # The raw context for reference
                 },
             }
 
@@ -1142,8 +1296,11 @@ class RepomixProcessor:
             # Step 9: Git Automation
             if repo_config.get("auto_commit", False):
                 logging.info("Step 9: Performing Git auto-commit operations...")
-                commit_message = f"LLMdiver enhanced analysis for {repo_config['name']}"
-                self.git_automation.auto_commit(repo_config["path"], commit_message)
+                git_automation = self.git_automations.get(repo_config['name'])
+                if git_automation:
+                    git_automation.auto_commit(analysis_file, json_analysis_file, analysis_data)
+                else:
+                    logging.warning(f"No GitAutomation instance found for {repo_config['name']}.")
             else:
                 logging.info("Step 9: Git auto-commit skipped (disabled for this repository).")
 
@@ -1256,7 +1413,7 @@ class FileChangeHandler(FileSystemEventHandler):
         for repo_config in self.processor.config.get('repositories', []):
             if Path(repo_path).resolve().is_relative_to(Path(repo_config['path']).resolve()):
                 logger.info(f"Scheduling analysis for {repo_config['name']} due to file change")
-                self.processor.run_analysis(repo_config['path'])
+                self.processor.enhanced_repository_analysis(repo_config)
                 break
 
 def main():
