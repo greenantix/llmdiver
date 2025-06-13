@@ -1309,27 +1309,28 @@ class RepomixProcessor:
             output_dir = Path(repo_path) / '.llmdiver'
             output_dir.mkdir(exist_ok=True)
             diff_output_file = output_dir / 'repomix_diff.md'
-
+            
             # This command is much faster as it only processes the git diff
-            cmd = [
-                'repomix', repo_path,
-                '--output', str(diff_output_file),
-                '--include-diffs',
-                '--style', 'markdown'
-            ]
-
+            cmd = ['repomix', repo_path, '--output', str(diff_output_file), '--include-diffs']
+            
             logging.info(f"Running incremental diff analysis with command: {' '.join(cmd)}")
             result = subprocess.run(cmd, check=True, capture_output=True, text=True)
-
+            
             if result.returncode != 0:
                 logging.error(f"Repomix diff analysis failed: {result.stderr}")
-                return None
+                return "" # Return empty string on failure
 
             with open(diff_output_file) as f:
-                return f.read()
+                content = f.read()
+            # If repomix finds no changes, it may return a header but no file content.
+            if "## File:" not in content:
+                logging.info("Repomix diff analysis found no substantive code changes.")
+                return ""
+            return content
+
         except Exception as e:
             logging.error(f"Failed to run repomix diff analysis: {e}", exc_info=True)
-            return None
+            return ""
 
     def _extract_structured_findings(self, analysis_text: str) -> Dict: #
         """Extract structured findings from AI analysis text for JSON output"""
@@ -1424,13 +1425,13 @@ class RepomixProcessor:
         logging.info(f"--- Starting Enhanced Analysis for {repo_config['name']} ---")
 
         try:
-            # Step 1: Run repomix to generate an incremental repository summary
+            # Step 1: Run repomix to generate an INCREMENTAL repository summary
             logging.info("Step 1: Running repomix --include-diffs to get changes...")
-            summary = self.run_repomix_diff_analysis(repo_config["path"])
-            
-            if not summary or "No changes detected" in summary:
-                logging.info("No file changes detected by git diff. Skipping analysis cycle.")
-                return  # Exit the analysis cycle cleanly
+            summary = self.run_repomix_diff_analysis(repo_config["path"]) # Use the new diff method
+
+            if not summary:
+                logging.info("No file changes detected by git diff. Skipping full analysis cycle.")
+                return # Exit the analysis cycle cleanly
             
             logging.info(f"Repomix diff summary generated ({len(summary)} characters).")
 
@@ -1467,27 +1468,25 @@ class RepomixProcessor:
 
             # Step 6: Construct the final prompt for the LLM
             logging.info("Step 6: Constructing final prompt for LLM analysis...")
-            enhanced_summary = f"""# Repository Analysis: {repo_config['name']}
+            enhanced_summary = f"""# Repository Analysis for: {repo_config['name']}
 
-            ## Project Context
-            - Primary Language: {project_info['primary_language']}
-            - Framework: {project_info['framework']}
-            - Manifest Files: {len(project_info['manifests'])}
+## Project Context
+- Primary Language: {project_info['primary_language']}
+- Framework: {project_info['framework']}
 
-            {manifest_analysis}
+{manifest_analysis}
 
-            {semantic_context}
+{semantic_context}
 
-            ## Preprocessed Code Analysis
-            {formatted_summary}
+## Code To Be Analyzed (Recent Changes)
+{formatted_summary}
 
-            ## Analysis Instructions
-            When analyzing this codebase, pay special attention to:
-            1. **Dependency Security**: If manifest changes detected, assess security implications of new/removed packages
-            2. **Language-Specific Patterns**: Apply {project_info['primary_language']}-specific best practices and common issues
-            3. **Code Structure**: Use the preprocessed architecture overview and complexity hotspots to focus analysis
-            4. **Code Reuse**: If similar code found, evaluate opportunities for refactoring and deduplication
-            """
+## Analysis Instructions
+You are a principal software architect. Your task is to review the provided code changes ("Code To Be Analyzed").
+1. **Primary Focus:** Analyze the new code for bugs, security vulnerabilities, and maintainability issues.
+2. **Use Semantic Context:** If "Semantic Context" is provided, check if the new code is redundant or could be refactored to use the existing similar code blocks. This is a high-priority task.
+3. **Be Concise:** Provide specific, actionable feedback with file and line numbers.
+"""
             logging.info(f"Final prompt constructed ({len(enhanced_summary)} characters).")
 
             # Step 7: Send to LLM for analysis
@@ -1499,13 +1498,13 @@ class RepomixProcessor:
             logging.info(f"LLM analysis successful ({len(analysis)} characters received).")
 
             # Step 8: Save results
-            logging.info("Step 8: Saving Markdown report and structured JSON output...")
+            logging.info("Step 8: Saving consolidated analysis reports...")
             analysis_dir = Path(repo_config["path"]) / ".llmdiver"
             analysis_dir.mkdir(exist_ok=True)
 
-            # --- FIX: Use static filenames instead of timestamped ones ---
-            analysis_file = analysis_dir / "LATEST_ANALYSIS.md"
-            json_analysis_file = analysis_dir / "LATEST_ANALYSIS.json"
+            # --- FIX: Use static, predictable filenames ---
+            analysis_file = analysis_dir / "LATEST_ENHANCED_ANALYSIS.md"
+            json_analysis_file = analysis_dir / "LATEST_ANALYSIS_DATA.json"
 
             analysis_data = {
                 "metadata": {
@@ -1536,7 +1535,7 @@ class RepomixProcessor:
                 f.write(f"# LLMdiver Enhanced Analysis - {datetime.now()}\n\n")
                 f.write(analysis)
 
-            logging.info(f"Saved Markdown to {analysis_file} and JSON to {json_analysis_file}")
+            logging.info(f"Consolidated reports updated: {analysis_file} and {json_analysis_file}")
 
             # Step 9: Git Automation
             if repo_config.get("auto_commit", False):
