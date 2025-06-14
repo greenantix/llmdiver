@@ -1,0 +1,242 @@
+{
+  "name": "aura-autonomous-assistant",
+  "displayName": "Aura - Autonomous AI Coding Assistant",
+  "description": "Level 9 Autonomous AI Coding Assistant - Your partner in perfect code",
+  "version": "1.0.0",
+  "publisher": "aura-ai",
+  "engines": {
+    "vscode": "^1.74.0"
+  },
+  "categories": [
+    "Other",
+    "Machine Learning",
+    "Programming Languages",
+    "Snippets",
+    "Debuggers"
+  ],
+  "keywords": [
+    "ai",
+    "assistant",
+    "autonomous",
+    "coding",
+    "aura",
+    "python",
+    "javascript",
+    "analysis",
+    "refactoring"
+  ],
+  "activationEvents": [
+    "onStartupFinished"
+  ],
+  "main": "./out/extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "aura.analyzeFile",
+        "title": "Analyze Current File",
+        "category": "Aura"
+      },
+      {
+        "command": "aura.analyzeProject",
+        "title": "Analyze Entire Project",
+        "category": "Aura"
+      },
+      {
+        "command": "aura.generateCommit",
+        "title": "Generate Semantic Commit",
+        "category": "Aura"
+      },
+      {
+        "command": "aura.askQuestion",
+        "title": "Ask Aura",
+        "category": "Aura"
+      },
+      {
+        "command": "aura.showDashboard",
+        "title": "Show Aura Dashboard",
+        "category": "Aura"
+      },
+      {
+        "command": "aura.toggleAutoAnalysis",
+        "title": "Toggle Auto-Analysis",
+        "category": "Aura"
+      }
+    ],
+    "keybindings": [
+      {
+        "command": "aura.analyzeFile",
+        "key": "ctrl+alt+a",
+        "mac": "cmd+alt+a",
+        "when": "editorTextFocus"
+      },
+      {
+        "command": "aura.askQuestion",
+        "key": "ctrl+alt+q",
+        "mac": "cmd+alt+q"
+      },
+      {
+        "command": "aura.generateCommit",
+        "key": "ctrl+alt+c",
+        "mac": "cmd+alt+c"
+      }
+    ],
+    "views": {
+      "aura-container": [
+        {
+          "id": "aura.dashboard",
+          "name": "Dashboard",
+          "when": "aura.enabled"
+        },
+        {
+          "id": "aura.codeAnalysis",
+          "name": "Code Analysis",
+          "when": "aura.enabled"
+        },
+        {
+          "id": "aura.suggestions",
+          "name": "Suggestions",
+          "when": "aura.enabled"
+        },
+        {
+          "id": "aura.chat",
+          "name": "Chat with Aura",
+          "when": "aura.enabled"
+        }
+      ]
+    },
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "aura-container",
+          "title": "Aura AI Assistant",
+          "icon": "$(robot)"
+        }
+      ]
+    },
+    "configuration": {
+      "title": "Aura",
+      "properties": {
+        "aura.autoAnalysis": {
+          "type": "boolean",
+          "default": true,
+          "description": "Enable automatic code analysis on file save"
+        },
+        "aura.serverUrl": {
+          "type": "string",
+          "default": "tcp://localhost:5559",
+          "description": "Aura server connection URL"
+        },
+        "aura.llmProvider": {
+          "type": "string",
+          "enum": [
+            "lm_studio",
+            "ollama"
+          ],
+          "default": "lm_studio",
+          "description": "Preferred LLM provider"
+        },
+        "aura.analysisDepth": {
+          "type": "string",
+          "enum": [
+            "basic",
+            "detailed",
+            "comprehensive"
+          ],
+          "default": "detailed",
+          "description": "Depth of code analysis"
+        },
+        "aura.showNotifications": {
+          "type": "boolean",
+          "default": true,
+          "description": "Show Aura notifications"
+        },
+        "aura.themeColor": {
+          "type": "string",
+          "enum": [
+            "purple",
+            "blue",
+            "green",
+            "gold"
+          ],
+          "default": "purple",
+          "description": "Aura theme color"
+        }
+      }
+    },
+    "colors": [
+      {
+        "id": "aura.primary",
+        "description": "Aura primary color",
+        "defaults": {
+          "dark": "#9f7aea",
+          "light": "#805ad5"
+        }
+      },
+      {
+        "id": "aura.secondary",
+        "description": "Aura secondary color",
+        "defaults": {
+          "dark": "#e53e3e",
+          "light": "#c53030"
+        }
+      }
+    ],
+    "menus": {
+      "editor/context": [
+        {
+          "command": "aura.analyzeFile",
+          "group": "aura@1",
+          "when": "resourceExtname == .py || resourceExtname == .js || resourceExtname == .ts"
+        },
+        {
+          "command": "aura.askQuestion",
+          "group": "aura@2"
+        }
+      ],
+      "explorer/context": [
+        {
+          "command": "aura.analyzeProject",
+          "group": "aura@1",
+          "when": "explorerResourceIsFolder"
+        }
+      ],
+      "scm/title": [
+        {
+          "command": "aura.generateCommit",
+          "group": "navigation@1"
+        }
+      ]
+    },
+    "iconThemes": [
+      {
+        "id": "aura-icons",
+        "label": "Aura Icons",
+        "path": "./icons/aura-icon-theme.json"
+      }
+    ]
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run compile",
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./",
+    "pretest": "npm run compile && npm run lint",
+    "lint": "eslint src --ext ts",
+    "test": "node ./out/test/runTest.js"
+  },
+  "devDependencies": {
+    "@types/vscode": "^1.74.0",
+    "@types/node": "16.x",
+    "@typescript-eslint/eslint-plugin": "^5.45.0",
+    "@typescript-eslint/parser": "^5.45.0",
+    "eslint": "^8.28.0",
+    "glob": "^8.0.3",
+    "typescript": "^4.9.4",
+    "@vscode/test-electron": "^2.2.0"
+  },
+  "dependencies": {
+    "ws": "^8.14.2",
+    "zeromq": "^6.0.0-beta.16"
+  },
+  "author": "",
+  "license": "ISC"
+}
