@@ -20,6 +20,9 @@ import tiktoken
 import numpy as np
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
+from llm_providers import ProviderOrchestrator, AnalysisTask
+from caching_layer import AnalysisCache, CachedRepomixProcessor
+from security_scanner import SecurityScanner
 
 # Check for optional dependencies
 try:
@@ -817,9 +820,40 @@ class MetricsCollector:
 class LLMStudioClient:
     def __init__(self, config):
         self.config = config
+        # Initialize multi-provider system
+        provider_config = {
+            "providers": {
+                "lmstudio": {
+                    "url": config["llm_integration"]["url"],
+                    "model": config["llm_integration"]["model"],
+                    "max_tokens": config["llm_integration"]["max_tokens"]
+                }
+            },
+            "fallback_chain": ["lmstudio"],
+            "cost_budget": config.get("cost_budget", 0.0)  # Default to free only
+        }
+        
+        # Add other providers if configured
+        if config.get("openai_api_key"):
+            provider_config["providers"]["openai"] = {
+                "api_key": config["openai_api_key"],
+                "model": config.get("openai_model", "gpt-4")
+            }
+            provider_config["fallback_chain"].append("openai")
+        
+        if config.get("ollama_enabled", False):
+            provider_config["providers"]["ollama"] = {
+                "url": config.get("ollama_url", "http://localhost:11434/api/generate"),
+                "model": config.get("ollama_model", "llama2")
+            }
+            provider_config["fallback_chain"].insert(-1, "ollama")  # Before OpenAI
+        
+        self.orchestrator = ProviderOrchestrator(provider_config)
+        self.specialized_prompts = self._load_specialized_prompts()
+        
+        # Legacy compatibility
         self.url = config["llm_integration"]["url"]
         self.model = config["llm_integration"]["model"]
-        self.specialized_prompts = self._load_specialized_prompts()
     
     def chunk_text(self, text: str, chunk_size: int = 16000) -> List[str]:
         """Split text into chunks that fit within context window"""
@@ -944,10 +978,20 @@ class LLMStudioClient:
 - Consider the project's architecture and technology stack"""
         }
 
-    def analyze_repo_summary(self, summary_text: str, analysis_type: str = "general") -> str:
-        """Send repo summary to LM Studio for analysis with auto-chunking"""
+    async def analyze_repo_summary(self, summary_text: str, analysis_type: str = "general") -> str:
+        """Send repo summary for analysis using multi-provider system"""
         system_prompt = self.specialized_prompts.get(analysis_type, self.specialized_prompts["general"])
-
+        full_prompt = f"{system_prompt}\n\nAnalyze this repository:\n\n{summary_text}"
+        
+        # Create analysis task
+        task = AnalysisTask(
+            task_type=analysis_type,
+            content=full_prompt,
+            context={"analysis_type": analysis_type},
+            max_tokens=self.config["llm_integration"].get("max_tokens", 4096),
+            temperature=self.config["llm_integration"].get("temperature", 0.3)
+        )
+        
         # Check if chunking is enabled and needed
         enable_chunking = self.config["llm_integration"].get("enable_chunking", False)
         chunk_size = self.config["llm_integration"].get("chunk_size", 16000)
@@ -958,27 +1002,50 @@ class LLMStudioClient:
             all_analyses = []
             
             for i, chunk in enumerate(chunks):
-                logging.info(f"Analyzing chunk {i+1}/{len(chunks)}")
-                chunk_prompt = f"Analyze this repository section ({i+1}/{len(chunks)}):\n\n{chunk}"
+                logging.info(f"Analyzing chunk {i+1}/{len(chunks)} using multi-provider system")
+                chunk_prompt = f"{system_prompt}\n\nAnalyze this repository section ({i+1}/{len(chunks)}):\n\n{chunk}"
                 
-                analysis = self._send_single_request(system_prompt, chunk_prompt)
-                if analysis.startswith("Analysis failed:") or analysis.startswith("LM Studio API error:"):
-                    return analysis  # Return error immediately
+                chunk_task = AnalysisTask(
+                    task_type=analysis_type,
+                    content=chunk_prompt,
+                    context={"chunk": i+1, "total_chunks": len(chunks)},
+                    max_tokens=task.max_tokens,
+                    temperature=task.temperature
+                )
                 
-                all_analyses.append(f"## Chunk {i+1}/{len(chunks)} Analysis\n{analysis}")
+                response = await self.orchestrator.route_request(chunk_task)
+                if not response.success:
+                    return f"Analysis failed: {response.error}"
+                
+                all_analyses.append(f"## Chunk {i+1}/{len(chunks)} Analysis\n{response.content}")
             
             # Combine analyses
             combined = "\n\n".join(all_analyses)
             
             # Send combined analysis for final summary
-            final_prompt = f"Summarize and consolidate these code audit findings:\n\n{combined}"
-            return self._send_single_request(
-                "You are consolidating multiple code audit reports. Combine similar findings and prioritize the most critical issues.",
-                final_prompt
+            final_prompt = "You are consolidating multiple code audit reports. Combine similar findings and prioritize the most critical issues.\n\n" + combined
+            final_task = AnalysisTask(
+                task_type="consolidation",
+                content=final_prompt,
+                context={"final_summary": True},
+                max_tokens=task.max_tokens,
+                temperature=task.temperature
             )
+            
+            final_response = await self.orchestrator.route_request(final_task)
+            if final_response.success:
+                logging.info(f"Multi-provider analysis completed. Provider: {final_response.provider}, Cost: ${final_response.cost_estimate:.4f}")
+                return final_response.content
+            else:
+                return f"Final analysis failed: {final_response.error}"
         else:
             # Single request for small repositories
-            return self._send_single_request(system_prompt, f"Analyze this repository:\n\n{summary_text}")
+            response = await self.orchestrator.route_request(task)
+            if response.success:
+                logging.info(f"Multi-provider analysis completed. Provider: {response.provider}, Cost: ${response.cost_estimate:.4f}")
+                return response.content
+            else:
+                return f"Analysis failed: {response.error}"
     
     def _send_single_request(self, system_prompt: str, user_prompt: str) -> str:
         """Send a single request to LM Studio"""
@@ -1230,9 +1297,8 @@ class RepomixProcessor:
         self.git_automations = {}
         self.metrics = MetricsCollector()
 
-        # --- FIX STARTS HERE ---
-        # Directly instantiate the classes we just copied into this file.
-        # This resolves the "is not defined" errors.
+        # Initialize caching system
+        self.cache = AnalysisCache(config.get('cache_dir', '.llmdiver/cache'))
 
         # Use the existing LLMStudioClient class for LLM communication
         self.llm_client = LLMStudioClient(self.config) 
@@ -1251,7 +1317,12 @@ class RepomixProcessor:
 
         # Instantiate the multi-project manager
         self.multi_project_manager = MultiProjectManager(config.get('multi_project', {}))
-        # --- FIX ENDS HERE ---
+
+        # Create cached processor wrapper
+        self.cached_processor = CachedRepomixProcessor(self, config.get('cache_dir', '.llmdiver/cache'))
+
+        # Initialize security scanner
+        self.security_scanner = SecurityScanner()
 
         # Initialize git automation for each repo
         for repo in config.get('repositories', []):
@@ -1420,20 +1491,20 @@ class RepomixProcessor:
             return ""
 
 
-    def enhanced_repository_analysis(self, repo_config: Dict):
+    async def enhanced_repository_analysis(self, repo_config: Dict):
         """Enhanced analysis including manifests and multi-project context"""
         logging.info(f"--- Starting Enhanced Analysis for {repo_config['name']} ---")
 
         try:
-            # Step 1: Run repomix to generate an INCREMENTAL repository summary
-            logging.info("Step 1: Running repomix --include-diffs to get changes...")
-            summary = self.run_repomix_diff_analysis(repo_config["path"]) # Use the new diff method
+            # Step 1: Run repomix to generate an INCREMENTAL repository summary (with caching)
+            logging.info("Step 1: Running cached repomix --include-diffs to get changes...")
+            summary = self.cached_processor.run_repomix_diff_analysis_cached(repo_config["path"])
 
             if not summary:
                 logging.info("No file changes detected by git diff. Skipping full analysis cycle.")
                 return # Exit the analysis cycle cleanly
             
-            logging.info(f"Repomix diff summary generated ({len(summary)} characters).")
+            logging.info(f"Repomix diff summary generated ({len(summary)} characters). Cache stats: {self.cache.get_stats()}")
 
             # Step 2: Preprocess and index code
             logging.info("Step 2: Preprocessing code and updating semantic index...")
@@ -1458,6 +1529,20 @@ class RepomixProcessor:
             else:
                 logging.info("No dependency changes found.")
 
+            # Step 4.5: Security Scanning (if enabled)
+            security_results = None
+            if self.config.get('security_scanning', {}).get('enabled', False):
+                logging.info("Step 4.5: Running security vulnerability scan...")
+                try:
+                    security_results = await self.security_scanner.comprehensive_scan(repo_config["path"])
+                    critical_count = security_results.summary.get('critical', 0)
+                    high_count = security_results.summary.get('high', 0)
+                    logging.info(f"Security scan completed: {critical_count} critical, {high_count} high severity issues found (Score: {security_results.security_score}/100)")
+                except Exception as e:
+                    logging.error(f"Security scan failed: {e}")
+            else:
+                logging.info("Step 4.5: Security scanning disabled, skipping...")
+
             # Step 5: Classify code and select prompt
             logging.info("Step 5: Using intelligent router to classify changes...")
             project_info = self.multi_project_manager.get_project_manifest_info(repo_config["path"])
@@ -1468,6 +1553,28 @@ class RepomixProcessor:
 
             # Step 6: Construct the final prompt for the LLM
             logging.info("Step 6: Constructing final prompt for LLM analysis...")
+            
+            # Add security context if available
+            security_context = ""
+            if security_results:
+                security_context = f"""
+## Security Scan Results
+- **Security Score:** {security_results.security_score}/100
+- **Critical Issues:** {security_results.summary.get('critical', 0)}
+- **High Priority Issues:** {security_results.summary.get('high', 0)}
+- **Medium Priority Issues:** {security_results.summary.get('medium', 0)}
+- **Low Priority Issues:** {security_results.summary.get('low', 0)}
+
+### Top Security Findings:
+"""
+                # Add top 5 most critical findings
+                critical_findings = [f for f in security_results.findings if f.severity in ['critical', 'high']][:5]
+                for i, finding in enumerate(critical_findings, 1):
+                    security_context += f"{i}. **{finding.severity.upper()}**: {finding.description} ({finding.file_path}:{finding.line_number})\n"
+                
+                if not critical_findings:
+                    security_context += "No critical security issues detected in recent changes.\n"
+
             enhanced_summary = f"""# Repository Analysis for: {repo_config['name']}
 
 ## Project Context
@@ -1475,6 +1582,8 @@ class RepomixProcessor:
 - Framework: {project_info['framework']}
 
 {manifest_analysis}
+
+{security_context}
 
 {semantic_context}
 
@@ -1484,14 +1593,15 @@ class RepomixProcessor:
 ## Analysis Instructions
 You are a principal software architect. Your task is to review the provided code changes ("Code To Be Analyzed").
 1. **Primary Focus:** Analyze the new code for bugs, security vulnerabilities, and maintainability issues.
-2. **Use Semantic Context:** If "Semantic Context" is provided, check if the new code is redundant or could be refactored to use the existing similar code blocks. This is a high-priority task.
-3. **Be Concise:** Provide specific, actionable feedback with file and line numbers.
+2. **Security Priority:** If security scan results are provided, prioritize addressing any critical or high-severity security findings.
+3. **Use Semantic Context:** If "Semantic Context" is provided, check if the new code is redundant or could be refactored to use the existing similar code blocks.
+4. **Be Concise:** Provide specific, actionable feedback with file and line numbers.
 """
             logging.info(f"Final prompt constructed ({len(enhanced_summary)} characters).")
 
             # Step 7: Send to LLM for analysis
             logging.info(f"Step 7: Sending payload to LLM with prompt type '{analysis_type.upper()}'...")
-            analysis = self.llm_client.analyze_repo_summary(enhanced_summary, analysis_type)
+            analysis = await self.llm_client.analyze_repo_summary(enhanced_summary, analysis_type)
             if "Analysis failed" in analysis or "API error" in analysis:
                 logging.error(f"ANALYSIS HALTED: LLM analysis failed. Response: {analysis}")
                 return
@@ -1521,10 +1631,28 @@ You are a principal software architect. Your task is to review the provided code
                     "raw_text": analysis,
                     "structured_findings": self._extract_structured_findings(analysis)
                 },
-                "semantic_analysis": { # <-- VERIFY AND ENHANCE THIS BLOCK
+                "semantic_analysis": {
                     "has_similar_code": bool(semantic_context.strip()),
                     "similar_blocks_found": len(semantic_context.split('File:')) - 1 if semantic_context.strip() else 0,
-                    "context_text": semantic_context # The raw context for reference
+                    "context_text": semantic_context
+                },
+                "security_analysis": {
+                    "enabled": self.config.get('security_scanning', {}).get('enabled', False),
+                    "security_score": security_results.security_score if security_results else None,
+                    "scan_time": security_results.scan_time if security_results else None,
+                    "tools_used": security_results.tools_used if security_results else [],
+                    "findings_summary": security_results.summary if security_results else {},
+                    "critical_findings": [
+                        {
+                            "severity": f.severity,
+                            "category": f.category,
+                            "file_path": f.file_path,
+                            "line_number": f.line_number,
+                            "description": f.description,
+                            "tool": f.tool
+                        } for f in (security_results.findings if security_results else [])
+                        if f.severity in ['critical', 'high']
+                    ][:10]  # Top 10 critical findings
                 },
             }
 
@@ -1663,7 +1791,19 @@ class FileChangeHandler(FileSystemEventHandler):
         for repo_config in self.processor.config.get('repositories', []):
             if Path(repo_path).resolve().is_relative_to(Path(repo_config['path']).resolve()):
                 logger.info(f"Scheduling analysis for {repo_config['name']} due to file change")
-                self.processor.enhanced_repository_analysis(repo_config)
+                # Run async analysis in event loop
+                import asyncio
+                try:
+                    loop = asyncio.get_event_loop()
+                    if loop.is_running():
+                        # Create a new task
+                        asyncio.create_task(self.processor.enhanced_repository_analysis(repo_config))
+                    else:
+                        loop.run_until_complete(self.processor.enhanced_repository_analysis(repo_config))
+                except Exception as e:
+                    logger.error(f"Failed to run async analysis: {e}")
+                    # Fallback - this won't work but prevents crash
+                    pass
                 break
 
 def main():
