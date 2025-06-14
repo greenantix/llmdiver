@@ -1,0 +1,153 @@
+{
+  "timestamp": "2025-06-14T05:35:16.716822",
+  "original_epics": 6,
+  "enhanced_epics": 6,
+  "original_tasks": 5,
+  "enhanced_tasks": 9,
+  "visual_analyses": 3,
+  "total_visual_elements": 8,
+  "total_suggested_stories": 5,
+  "visual_enhanced_tasks": 4,
+  "confidence_scores": [
+    0.85,
+    0.9,
+    0.85
+  ],
+  "complexity_distribution": {
+    "medium": 2,
+    "complex": 1
+  },
+  "content_type_distribution": {
+    "ui_mockup": 2,
+    "architecture_diagram": 1
+  },
+  "sample_enhanced_tasks": [
+    {
+      "id": "epic_1_1",
+      "title": "Core System Architecture",
+      "labels": [
+        "automation"
+      ],
+      "estimate": null,
+      "acceptance_criteria_count": 0,
+      "visual_enhanced": false
+    },
+    {
+      "id": "story_arch_1",
+      "title": "As a developer, I want a message bus so that modules can communicate",
+      "labels": [
+        "story"
+      ],
+      "estimate": {
+        "value": 5,
+        "unit": "story_points"
+      },
+      "acceptance_criteria_count": 1,
+      "visual_enhanced": false
+    },
+    {
+      "id": "task_zmq_setup",
+      "title": "Set up ZeroMQ infrastructure",
+      "labels": [
+        "backend",
+        "infrastructure",
+        "zmq"
+      ],
+      "estimate": {
+        "value": 2,
+        "unit": "days"
+      },
+      "acceptance_criteria_count": 0,
+      "visual_enhanced": false
+    },
+    {
+      "id": "task_message_routing",
+      "title": "Implement message routing logic",
+      "labels": [
+        "backend",
+        "messaging",
+        "routing"
+      ],
+      "estimate": {
+        "value": 3,
+        "unit": "days"
+      },
+      "acceptance_criteria_count": 0,
+      "visual_enhanced": false
+    },
+    {
+      "id": "spike_zmq_patterns",
+      "title": "Research ZeroMQ message patterns",
+      "labels": [
+        "research",
+        "spike"
+      ],
+      "estimate": {
+        "value": 1,
+        "unit": "days"
+      },
+      "acceptance_criteria_count": 0,
+      "visual_enhanced": false
+    },
+    {
+      "id": "visual_task_nav_bar",
+      "title": "Implement navigation: Top navigation bar with logo, menu items, and user profile",
+      "labels": [
+        "visual",
+        "ui",
+        "navigation"
+      ],
+      "estimate": {
+        "value": 6,
+        "unit": "hours"
+      },
+      "acceptance_criteria_count": 1,
+      "visual_enhanced": true
+    },
+    {
+      "id": "visual_task_sidebar",
+      "title": "Implement navigation: Left sidebar with menu navigation",
+      "labels": [
+        "visual",
+        "ui",
+        "navigation"
+      ],
+      "estimate": {
+        "value": 9.0,
+        "unit": "hours"
+      },
+      "acceptance_criteria_count": 1,
+      "visual_enhanced": true
+    },
+    {
+      "id": "visual_accessibility_4977332493427486934",
+      "title": "Implement accessibility requirements from visual design",
+      "labels": [
+        "accessibility",
+        "visual",
+        "compliance"
+      ],
+      "estimate": {
+        "value": 4,
+        "unit": "hours"
+      },
+      "acceptance_criteria_count": 1,
+      "visual_enhanced": true
+    },
+    {
+      "id": "visual_accessibility_-2156862215402278579",
+      "title": "Implement accessibility requirements from visual design",
+      "labels": [
+        "accessibility",
+        "visual",
+        "compliance"
+      ],
+      "estimate": {
+        "value": 4,
+        "unit": "hours"
+      },
+      "acceptance_criteria_count": 1,
+      "visual_enhanced": true
+    }
+  ]
+}

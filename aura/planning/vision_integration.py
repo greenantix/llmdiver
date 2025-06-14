@@ -17,7 +17,7 @@ import subprocess
 from ..core.config import AuraConfig
 from ..llm.providers import LLMProvider, LLMRequest, LLMResponse
 from .prd_parser import RequirementAnalysis, Epic, UserStory
-from .task_decomposer import TaskHierarchy, DecomposedTask, TaskType, Priority
+from .task_decomposer import TaskHierarchy, DecomposedTask, TaskType, Priority, TaskStatus
 
 
 class VisualContentType(Enum):
@@ -90,6 +90,19 @@ class VisionLLMProvider(LLMProvider):
     
     async def get_available_models(self):
         return [self.vision_model]
+    
+    async def generate_completion(self, request: LLMRequest) -> LLMResponse:
+        """Generate completion for the request"""
+        # Simple text completion
+        response_text = await self._mock_vision_analysis('', request.prompt, None)
+        
+        return LLMResponse(
+            request_id=request.request_id,
+            content=response_text,
+            model_used=self.vision_model,
+            tokens_used=len(response_text) // 4,
+            processing_time=0.1
+        )
     
     async def analyze_image(self, image_path: str, prompt: str, context: Optional[Dict[str, Any]] = None) -> str:
         """Analyze image using vision model"""

@@ -1,0 +1,1436 @@
+{
+  "timestamp": "2025-06-14T05:56:01.125976",
+  "summary": {
+    "total_files": 28,
+    "total_lines": 10579,
+    "security_score": 0.9933831174969279,
+    "performance_score": 0.9992437848567918,
+    "quality_score": 0.632
+  },
+  "security_issues": [
+    {
+      "file": "/home/greenantix/AI/LLMdiver/aura/intelligence/self_analyzer.py",
+      "line": 149,
+      "severity": "high",
+      "type": "weak_crypto",
+      "description": "Using weak random for secrets"
+    },
+    {
+      "file": "/home/greenantix/AI/LLMdiver/aura/intelligence/self_analyzer.py",
+      "line": 162,
+      "severity": "high",
+      "type": "weak_crypto",
+      "description": "Using weak random for secrets"
+    },
+    {
+      "file": "/home/greenantix/AI/LLMdiver/aura/intelligence/self_analyzer.py",
+      "line": 526,
+      "severity": "high",
+      "type": "code_injection",
+      "description": "Use of eval() is dangerous"
+    },
+    {
+      "file": "/home/greenantix/AI/LLMdiver/aura/intelligence/self_analyzer.py",
+      "line": 527,
+      "severity": "high",
+      "type": "code_injection",
+      "description": "Use of exec() is dangerous"
+    },
+    {
+      "file": "/home/greenantix/AI/LLMdiver/aura/intelligence/self_analyzer.py",
+      "line": 530,
+      "severity": "high",
+      "type": "command_injection",
+      "description": "os.system() can lead to command injection"
+    },
+    {
+      "file": "/home/greenantix/AI/LLMdiver/aura/intelligence/self_analyzer.py",
+      "line": 531,
+      "severity": "high",
+      "type": "weak_crypto",
+      "description": "Using weak random for secrets"
+    },
+    {
+      "file": "/home/greenantix/AI/LLMdiver/aura/intelligence/self_analyzer.py",
+      "line": 550,
+      "severity": "high",
+      "type": "weak_crypto",
+      "description": "Using weak random for secrets"
+    },
+    {
+      "file": "/home/greenantix/AI/LLMdiver/aura/intelligence/self_analyzer.py",
+      "line": 551,
+      "severity": "high",
+      "type": "weak_crypto",
+      "description": "Using weak random for secrets"
+    },
+    {
+      "file": "/home/greenantix/AI/LLMdiver/aura/intelligence/self_analyzer.py",
+      "line": 553,
+      "severity": "high",
+      "type": "weak_crypto",
+      "description": "Using weak random for secrets"
+    },
+    {
+      "file": "/home/greenantix/AI/LLMdiver/aura/intelligence/self_analyzer.py",
+      "line": 559,
+      "severity": "high",
+      "type": "weak_crypto",
+      "description": "Using weak random for secrets"
+    },
+    {
+      "file": "/home/greenantix/AI/LLMdiver/aura/intelligence/self_analyzer.py",
+      "line": 565,
+      "severity": "high",
+      "type": "weak_crypto",
+      "description": "Using weak random for secrets"
+    },
+    {
+      "file": "/home/greenantix/AI/LLMdiver/aura/intelligence/self_analyzer.py",
+      "line": 566,
+      "severity": "high",
+      "type": "weak_crypto",
+      "description": "Using weak random for secrets"
+    },
+    {
+      "file": "/home/greenantix/AI/LLMdiver/aura/intelligence/python_analyzer.py",
+      "line": 425,
+      "severity": "high",
+      "type": "weak_crypto",
+      "description": "MD5 is cryptographically broken"
+    },
+    {
+      "file": "/home/greenantix/AI/LLMdiver/aura/core/architecture.py",
+      "line": 225,
+      "severity": "high",
+      "type": "weak_crypto",
+      "description": "Using weak random for secrets"
+    }
+  ],
+  "performance_issues": [
+    {
+      "file": "/home/greenantix/AI/LLMdiver/aura/planning/dependency_grapher.py",
+      "line": 560,
+      "impact": "medium",
+      "type": "inefficient_loop",
+      "description": "Use direct iteration instead of range(len())"
+    },
+    {
+      "file": "/home/greenantix/AI/LLMdiver/aura/gui/control_panel.py",
+      "line": 371,
+      "impact": "medium",
+      "type": "blocking_sleep",
+      "description": "time.sleep() blocks the thread"
+    },
+    {
+      "file": "/home/greenantix/AI/LLMdiver/aura/gui/control_panel.py",
+      "line": 375,
+      "impact": "medium",
+      "type": "blocking_sleep",
+      "description": "time.sleep() blocks the thread"
+    },
+    {
+      "file": "/home/greenantix/AI/LLMdiver/aura/intelligence/self_analyzer.py",
+      "line": 616,
+      "impact": "medium",
+      "type": "blocking_sleep",
+      "description": "time.sleep() blocks the thread"
+    }
+  ],
+  "quality_issues": [
+    {
+      "file": "/home/greenantix/AI/LLMdiver/aura/aura_main.py",
+      "line": 82,
+      "level": "needs_improvement",
+      "type": "long_function",
+      "description": "Function _signal_handler is too long (215 lines)"
+    },
+    {
+      "file": "/home/greenantix/AI/LLMdiver/aura/aura_main.py",
+      "line": 33,
+      "level": "needs_improvement",
+      "type": "missing_docstring",
+      "description": "Function missing docstring"
+    },
+    {
+      "file": "/home/greenantix/AI/LLMdiver/aura/vscode/node_modules/flatted/python/flatted.py",
+      "line": 19,
+      "level": "needs_improvement",
+      "type": "missing_docstring",
+      "description": "Class missing docstring"
+    },
+    {
+      "file": "/home/greenantix/AI/LLMdiver/aura/vscode/node_modules/flatted/python/flatted.py",
+      "line": 20,
+      "level": "needs_improvement",
+      "type": "missing_docstring",
+      "description": "Function missing docstring"
+    },
+    {
+      "file": "/home/greenantix/AI/LLMdiver/aura/vscode/node_modules/flatted/python/flatted.py",
+      "line": 24,
+      "level": "needs_improvement",
+      "type": "missing_docstring",
+      "description": "Class missing docstring"
+    },
+    {
+      "file": "/home/greenantix/AI/LLMdiver/aura/vscode/node_modules/flatted/python/flatted.py",
+      "line": 25,
+      "level": "needs_improvement",
+      "type": "missing_docstring",
+      "description": "Function missing docstring"
+    },
+    {
+      "file": "/home/greenantix/AI/LLMdiver/aura/vscode/node_modules/flatted/python/flatted.py",
+      "line": 29,
+      "level": "needs_improvement",
+      "type": "missing_docstring",
+      "description": "Function missing docstring"
+    },
+    {
+      "file": "/home/greenantix/AI/LLMdiver/aura/vscode/node_modules/flatted/python/flatted.py",
+      "line": 37,
+      "level": "needs_improvement",
+      "type": "missing_docstring",
+      "description": "Function missing docstring"
+    },
+    {
+      "file": "/home/greenantix/AI/LLMdiver/aura/vscode/node_modules/flatted/python/flatted.py",
+      "line": 43,
+      "level": "needs_improvement",
+      "type": "missing_docstring",
+      "description": "Function missing docstring"
+    },
+    {
+      "file": "/home/greenantix/AI/LLMdiver/aura/vscode/node_modules/flatted/python/flatted.py",
+      "line": 46,
+      "level": "needs_improvement",
+      "type": "missing_docstring",
+      "description": "Function missing docstring"
+    },
+    {
+      "file": "/home/greenantix/AI/LLMdiver/aura/vscode/node_modules/flatted/python/flatted.py",
+      "line": 49,
+      "level": "needs_improvement",
+      "type": "missing_docstring",
+      "description": "Function missing docstring"
+    },
+    {
+      "file": "/home/greenantix/AI/LLMdiver/aura/vscode/node_modules/flatted/python/flatted.py",
+      "line": 52,
+      "level": "needs_improvement",
+      "type": "missing_docstring",
+      "description": "Function missing docstring"
+    },
+    {
+      "file": "/home/greenantix/AI/LLMdiver/aura/vscode/node_modules/flatted/python/flatted.py",
+      "line": 59,
+      "level": "needs_improvement",
+      "type": "missing_docstring",
+      "description": "Function missing docstring"
+    },
+    {
+      "file": "/home/greenantix/AI/LLMdiver/aura/vscode/node_modules/flatted/python/flatted.py",
+      "line": 67,
+      "level": "needs_improvement",
+      "type": "missing_docstring",
+      "description": "Function missing docstring"
+    },
+    {
+      "file": "/home/greenantix/AI/LLMdiver/aura/vscode/node_modules/flatted/python/flatted.py",
+      "line": 77,
+      "level": "needs_improvement",
+      "type": "missing_docstring",
+      "description": "Function missing docstring"
+    },
+    {
+      "file": "/home/greenantix/AI/LLMdiver/aura/vscode/node_modules/flatted/python/flatted.py",
+      "line": 86,
+      "level": "needs_improvement",
+      "type": "missing_docstring",
+      "description": "Function missing docstring"
+    },
+    {
+      "file": "/home/greenantix/AI/LLMdiver/aura/vscode/node_modules/flatted/python/flatted.py",
+      "line": 101,
+      "level": "needs_improvement",
+      "type": "missing_docstring",
+      "description": "Function missing docstring"
+    },
+    {
+      "file": "/home/greenantix/AI/LLMdiver/aura/vscode/node_modules/flatted/python/flatted.py",
+      "line": 117,
+      "level": "needs_improvement",
+      "type": "missing_docstring",
+      "description": "Function missing docstring"
+    },
+    {
+      "file": "/home/greenantix/AI/LLMdiver/aura/vscode/node_modules/flatted/python/flatted.py",
+      "line": 141,
+      "level": "needs_improvement",
+      "type": "missing_docstring",
+      "description": "Function missing docstring"
+    },
+    {
+      "file": "/home/greenantix/AI/LLMdiver/aura/planning/prd_parser.py",
+      "line": 312,
+      "level": "needs_improvement",
+      "type": "long_function",
+      "description": "Function _extract_version is too long (210 lines)"
+    },
+    {
+      "file": "/home/greenantix/AI/LLMdiver/aura/planning/prd_parser.py",
+      "line": 19,
+      "level": "needs_improvement",
+      "type": "missing_docstring",
+      "description": "Class missing docstring"
+    },
+    {
+      "file": "/home/greenantix/AI/LLMdiver/aura/planning/prd_parser.py",
+      "line": 29,
+      "level": "needs_improvement",
+      "type": "missing_docstring",
+      "description": "Class missing docstring"
+    },
+    {
+      "file": "/home/greenantix/AI/LLMdiver/aura/planning/prd_parser.py",
+      "line": 36,
+      "level": "needs_improvement",
+      "type": "missing_docstring",
+      "description": "Class missing docstring"
+    },
+    {
+      "file": "/home/greenantix/AI/LLMdiver/aura/planning/prd_parser.py",
+      "line": 44,
+      "level": "needs_improvement",
+      "type": "missing_docstring",
+      "description": "Class missing docstring"
+    },
+    {
+      "file": "/home/greenantix/AI/LLMdiver/aura/planning/prd_parser.py",
+      "line": 57,
+      "level": "needs_improvement",
+      "type": "missing_docstring",
+      "description": "Class missing docstring"
+    },
+    {
+      "file": "/home/greenantix/AI/LLMdiver/aura/planning/prd_parser.py",
+      "line": 69,
+      "level": "needs_improvement",
+      "type": "missing_docstring",
+      "description": "Class missing docstring"
+    },
+    {
+      "file": "/home/greenantix/AI/LLMdiver/aura/planning/prd_parser.py",
+      "line": 81,
+      "level": "needs_improvement",
+      "type": "missing_docstring",
+      "description": "Class missing docstring"
+    },
+    {
+      "file": "/home/greenantix/AI/LLMdiver/aura/planning/prd_parser.py",
+      "line": 94,
+      "level": "needs_improvement",
+      "type": "missing_docstring",
+      "description": "Class missing docstring"
+    },
+    {
+      "file": "/home/greenantix/AI/LLMdiver/aura/planning/prd_parser.py",
+      "line": 95,
+      "level": "needs_improvement",
+      "type": "missing_docstring",
+      "description": "Function missing docstring"
+    },
+    {
+      "file": "/home/greenantix/AI/LLMdiver/aura/planning/plan_executor.py",
+      "line": 206,
+      "level": "needs_improvement",
+      "type": "long_function",
+      "description": "Function _calculate_execution_queue is too long (281 lines)"
+    },
+    {
+      "file": "/home/greenantix/AI/LLMdiver/aura/planning/plan_executor.py",
+      "line": 22,
+      "level": "needs_improvement",
+      "type": "missing_docstring",
+      "description": "Class missing docstring"
+    },
+    {
+      "file": "/home/greenantix/AI/LLMdiver/aura/planning/plan_executor.py",
+      "line": 32,
+      "level": "needs_improvement",
+      "type": "missing_docstring",
+      "description": "Class missing docstring"
+    },
+    {
+      "file": "/home/greenantix/AI/LLMdiver/aura/planning/plan_executor.py",
+      "line": 39,
+      "level": "needs_improvement",
+      "type": "missing_docstring",
+      "description": "Class missing docstring"
+    },
+    {
+      "file": "/home/greenantix/AI/LLMdiver/aura/planning/plan_executor.py",
+      "line": 48,
+      "level": "needs_improvement",
+      "type": "missing_docstring",
+      "description": "Class missing docstring"
+    },
+    {
+      "file": "/home/greenantix/AI/LLMdiver/aura/planning/plan_executor.py",
+      "line": 58,
+      "level": "needs_improvement",
+      "type": "missing_docstring",
+      "description": "Function missing docstring"
+    },
+    {
+      "file": "/home/greenantix/AI/LLMdiver/aura/planning/plan_executor.py",
+      "line": 64,
+      "level": "needs_improvement",
+      "type": "missing_docstring",
+      "description": "Class missing docstring"
+    },
+    {
+      "file": "/home/greenantix/AI/LLMdiver/aura/planning/plan_executor.py",
+      "line": 99,
+      "level": "needs_improvement",
+      "type": "missing_docstring",
+      "description": "Function missing docstring"
+    },
+    {
+      "file": "/home/greenantix/AI/LLMdiver/aura/planning/plan_executor.py",
+      "line": 118,
+      "level": "needs_improvement",
+      "type": "missing_docstring",
+      "description": "Function missing docstring"
+    },
+    {
+      "file": "/home/greenantix/AI/LLMdiver/aura/planning/plan_executor.py",
+      "line": 136,
+      "level": "needs_improvement",
+      "type": "missing_docstring",
+      "description": "Function missing docstring"
+    },
+    {
+      "file": "/home/greenantix/AI/LLMdiver/aura/planning/plan_executor.py",
+      "line": 152,
+      "level": "needs_improvement",
+      "type": "missing_docstring",
+      "description": "Class missing docstring"
+    },
+    {
+      "file": "/home/greenantix/AI/LLMdiver/aura/planning/plan_executor.py",
+      "line": 153,
+      "level": "needs_improvement",
+      "type": "missing_docstring",
+      "description": "Function missing docstring"
+    },
+    {
+      "file": "/home/greenantix/AI/LLMdiver/aura/planning/dependency_grapher.py",
+      "line": 348,
+      "level": "needs_improvement",
+      "type": "long_function",
+      "description": "Function _build_networkx_graph is too long (64 lines)"
+    },
+    {
+      "file": "/home/greenantix/AI/LLMdiver/aura/planning/dependency_grapher.py",
+      "line": 540,
+      "level": "needs_improvement",
+      "type": "long_function",
+      "description": "Function _analyze_resource_constraints is too long (60 lines)"
+    },
+    {
+      "file": "/home/greenantix/AI/LLMdiver/aura/planning/dependency_grapher.py",
+      "line": 20,
+      "level": "needs_improvement",
+      "type": "missing_docstring",
+      "description": "Class missing docstring"
+    },
+    {
+      "file": "/home/greenantix/AI/LLMdiver/aura/planning/dependency_grapher.py",
+      "line": 28,
+      "level": "needs_improvement",
+      "type": "missing_docstring",
+      "description": "Class missing docstring"
+    },
+    {
+      "file": "/home/greenantix/AI/LLMdiver/aura/planning/dependency_grapher.py",
+      "line": 36,
+      "level": "needs_improvement",
+      "type": "missing_docstring",
+      "description": "Class missing docstring"
+    },
+    {
+      "file": "/home/greenantix/AI/LLMdiver/aura/planning/dependency_grapher.py",
+      "line": 46,
+      "level": "needs_improvement",
+      "type": "missing_docstring",
+      "description": "Class missing docstring"
+    },
+    {
+      "file": "/home/greenantix/AI/LLMdiver/aura/planning/dependency_grapher.py",
+      "line": 56,
+      "level": "needs_improvement",
+      "type": "missing_docstring",
+      "description": "Function missing docstring"
+    },
+    {
+      "file": "/home/greenantix/AI/LLMdiver/aura/planning/dependency_grapher.py",
+      "line": 61,
+      "level": "needs_improvement",
+      "type": "missing_docstring",
+      "description": "Class missing docstring"
+    },
+    {
+      "file": "/home/greenantix/AI/LLMdiver/aura/planning/dependency_grapher.py",
+      "line": 70,
+      "level": "needs_improvement",
+      "type": "missing_docstring",
+      "description": "Class missing docstring"
+    },
+    {
+      "file": "/home/greenantix/AI/LLMdiver/aura/planning/dependency_grapher.py",
+      "line": 83,
+      "level": "needs_improvement",
+      "type": "missing_docstring",
+      "description": "Class missing docstring"
+    },
+    {
+      "file": "/home/greenantix/AI/LLMdiver/aura/planning/dependency_grapher.py",
+      "line": 84,
+      "level": "needs_improvement",
+      "type": "missing_docstring",
+      "description": "Function missing docstring"
+    },
+    {
+      "file": "/home/greenantix/AI/LLMdiver/aura/planning/dependency_grapher.py",
+      "line": 437,
+      "level": "needs_improvement",
+      "type": "missing_docstring",
+      "description": "Function missing docstring"
+    },
+    {
+      "file": "/home/greenantix/AI/LLMdiver/aura/planning/task_decomposer.py",
+      "line": 508,
+      "level": "needs_improvement",
+      "type": "long_function",
+      "description": "Function _parse_dependencies is too long (93 lines)"
+    },
+    {
+      "file": "/home/greenantix/AI/LLMdiver/aura/planning/task_decomposer.py",
+      "line": 19,
+      "level": "needs_improvement",
+      "type": "missing_docstring",
+      "description": "Class missing docstring"
+    },
+    {
+      "file": "/home/greenantix/AI/LLMdiver/aura/planning/task_decomposer.py",
+      "line": 29,
+      "level": "needs_improvement",
+      "type": "missing_docstring",
+      "description": "Class missing docstring"
+    },
+    {
+      "file": "/home/greenantix/AI/LLMdiver/aura/planning/task_decomposer.py",
+      "line": 39,
+      "level": "needs_improvement",
+      "type": "missing_docstring",
+      "description": "Class missing docstring"
+    },
+    {
+      "file": "/home/greenantix/AI/LLMdiver/aura/planning/task_decomposer.py",
+      "line": 46,
+      "level": "needs_improvement",
+      "type": "missing_docstring",
+      "description": "Class missing docstring"
+    },
+    {
+      "file": "/home/greenantix/AI/LLMdiver/aura/planning/task_decomposer.py",
+      "line": 54,
+      "level": "needs_improvement",
+      "type": "missing_docstring",
+      "description": "Class missing docstring"
+    },
+    {
+      "file": "/home/greenantix/AI/LLMdiver/aura/planning/task_decomposer.py",
+      "line": 61,
+      "level": "needs_improvement",
+      "type": "missing_docstring",
+      "description": "Class missing docstring"
+    },
+    {
+      "file": "/home/greenantix/AI/LLMdiver/aura/planning/task_decomposer.py",
+      "line": 69,
+      "level": "needs_improvement",
+      "type": "missing_docstring",
+      "description": "Class missing docstring"
+    },
+    {
+      "file": "/home/greenantix/AI/LLMdiver/aura/planning/task_decomposer.py",
+      "line": 88,
+      "level": "needs_improvement",
+      "type": "missing_docstring",
+      "description": "Class missing docstring"
+    },
+    {
+      "file": "/home/greenantix/AI/LLMdiver/aura/planning/task_decomposer.py",
+      "line": 99,
+      "level": "needs_improvement",
+      "type": "missing_docstring",
+      "description": "Class missing docstring"
+    },
+    {
+      "file": "/home/greenantix/AI/LLMdiver/aura/planning/task_decomposer.py",
+      "line": 100,
+      "level": "needs_improvement",
+      "type": "missing_docstring",
+      "description": "Function missing docstring"
+    },
+    {
+      "file": "/home/greenantix/AI/LLMdiver/aura/planning/vision_integration.py",
+      "line": 85,
+      "level": "needs_improvement",
+      "type": "long_function",
+      "description": "Function _get_model_mappings is too long (62 lines)"
+    },
+    {
+      "file": "/home/greenantix/AI/LLMdiver/aura/planning/vision_integration.py",
+      "line": 467,
+      "level": "needs_improvement",
+      "type": "long_function",
+      "description": "Function _create_fallback_analysis is too long (170 lines)"
+    },
+    {
+      "file": "/home/greenantix/AI/LLMdiver/aura/planning/vision_integration.py",
+      "line": 637,
+      "level": "needs_improvement",
+      "type": "long_function",
+      "description": "Function _is_visual_relevant_to_task is too long (84 lines)"
+    },
+    {
+      "file": "/home/greenantix/AI/LLMdiver/aura/planning/vision_integration.py",
+      "line": 721,
+      "level": "needs_improvement",
+      "type": "long_function",
+      "description": "Function _estimate_element_effort is too long (111 lines)"
+    },
+    {
+      "file": "/home/greenantix/AI/LLMdiver/aura/planning/vision_integration.py",
+      "line": 23,
+      "level": "needs_improvement",
+      "type": "missing_docstring",
+      "description": "Class missing docstring"
+    },
+    {
+      "file": "/home/greenantix/AI/LLMdiver/aura/planning/vision_integration.py",
+      "line": 34,
+      "level": "needs_improvement",
+      "type": "missing_docstring",
+      "description": "Class missing docstring"
+    },
+    {
+      "file": "/home/greenantix/AI/LLMdiver/aura/planning/vision_integration.py",
+      "line": 41,
+      "level": "needs_improvement",
+      "type": "missing_docstring",
+      "description": "Class missing docstring"
+    },
+    {
+      "file": "/home/greenantix/AI/LLMdiver/aura/planning/vision_integration.py",
+      "line": 52,
+      "level": "needs_improvement",
+      "type": "missing_docstring",
+      "description": "Class missing docstring"
+    },
+    {
+      "file": "/home/greenantix/AI/LLMdiver/aura/planning/vision_integration.py",
+      "line": 70,
+      "level": "needs_improvement",
+      "type": "missing_docstring",
+      "description": "Class missing docstring"
+    },
+    {
+      "file": "/home/greenantix/AI/LLMdiver/aura/planning/vision_integration.py",
+      "line": 80,
+      "level": "needs_improvement",
+      "type": "missing_docstring",
+      "description": "Function missing docstring"
+    },
+    {
+      "file": "/home/greenantix/AI/LLMdiver/aura/planning/vision_integration.py",
+      "line": 85,
+      "level": "needs_improvement",
+      "type": "missing_docstring",
+      "description": "Function missing docstring"
+    },
+    {
+      "file": "/home/greenantix/AI/LLMdiver/aura/planning/vision_integration.py",
+      "line": 329,
+      "level": "needs_improvement",
+      "type": "missing_docstring",
+      "description": "Class missing docstring"
+    },
+    {
+      "file": "/home/greenantix/AI/LLMdiver/aura/planning/vision_integration.py",
+      "line": 330,
+      "level": "needs_improvement",
+      "type": "missing_docstring",
+      "description": "Function missing docstring"
+    },
+    {
+      "file": "/home/greenantix/AI/LLMdiver/aura/gui/control_panel.py",
+      "line": 97,
+      "level": "needs_improvement",
+      "type": "long_function",
+      "description": "Function add_log is too long (53 lines)"
+    },
+    {
+      "file": "/home/greenantix/AI/LLMdiver/aura/gui/control_panel.py",
+      "line": 157,
+      "level": "needs_improvement",
+      "type": "long_function",
+      "description": "Function __init__ is too long (87 lines)"
+    },
+    {
+      "file": "/home/greenantix/AI/LLMdiver/aura/gui/control_panel.py",
+      "line": 251,
+      "level": "needs_improvement",
+      "type": "long_function",
+      "description": "Function emit is too long (96 lines)"
+    },
+    {
+      "file": "/home/greenantix/AI/LLMdiver/aura/gui/control_panel.py",
+      "line": 381,
+      "level": "needs_improvement",
+      "type": "long_function",
+      "description": "Function _collect_system_metrics is too long (78 lines)"
+    },
+    {
+      "file": "/home/greenantix/AI/LLMdiver/aura/gui/control_panel.py",
+      "line": 39,
+      "level": "needs_improvement",
+      "type": "missing_docstring",
+      "description": "Function missing docstring"
+    },
+    {
+      "file": "/home/greenantix/AI/LLMdiver/aura/gui/control_panel.py",
+      "line": 72,
+      "level": "needs_improvement",
+      "type": "missing_docstring",
+      "description": "Function missing docstring"
+    },
+    {
+      "file": "/home/greenantix/AI/LLMdiver/aura/gui/control_panel.py",
+      "line": 157,
+      "level": "needs_improvement",
+      "type": "missing_docstring",
+      "description": "Function missing docstring"
+    },
+    {
+      "file": "/home/greenantix/AI/LLMdiver/aura/gui/control_panel.py",
+      "line": 246,
+      "level": "needs_improvement",
+      "type": "missing_docstring",
+      "description": "Class missing docstring"
+    },
+    {
+      "file": "/home/greenantix/AI/LLMdiver/aura/gui/control_panel.py",
+      "line": 247,
+      "level": "needs_improvement",
+      "type": "missing_docstring",
+      "description": "Function missing docstring"
+    },
+    {
+      "file": "/home/greenantix/AI/LLMdiver/aura/gui/control_panel.py",
+      "line": 251,
+      "level": "needs_improvement",
+      "type": "missing_docstring",
+      "description": "Function missing docstring"
+    },
+    {
+      "file": "/home/greenantix/AI/LLMdiver/aura/gui/control_panel.py",
+      "line": 349,
+      "level": "needs_improvement",
+      "type": "missing_docstring",
+      "description": "Function missing docstring"
+    },
+    {
+      "file": "/home/greenantix/AI/LLMdiver/aura/intelligence/self_analyzer.py",
+      "line": 464,
+      "level": "needs_improvement",
+      "type": "long_function",
+      "description": "Function _calculate_maintainability_index is too long (54 lines)"
+    },
+    {
+      "file": "/home/greenantix/AI/LLMdiver/aura/intelligence/self_analyzer.py",
+      "line": 518,
+      "level": "needs_improvement",
+      "type": "long_function",
+      "description": "Function _pattern_based_security_analysis is too long (87 lines)"
+    },
+    {
+      "file": "/home/greenantix/AI/LLMdiver/aura/intelligence/self_analyzer.py",
+      "line": 605,
+      "level": "needs_improvement",
+      "type": "long_function",
+      "description": "Function _pattern_based_performance_analysis is too long (60 lines)"
+    },
+    {
+      "file": "/home/greenantix/AI/LLMdiver/aura/intelligence/self_analyzer.py",
+      "line": 665,
+      "level": "needs_improvement",
+      "type": "long_function",
+      "description": "Function _pattern_based_quality_analysis is too long (134 lines)"
+    },
+    {
+      "file": "/home/greenantix/AI/LLMdiver/aura/intelligence/self_analyzer.py",
+      "line": 863,
+      "level": "needs_improvement",
+      "type": "long_function",
+      "description": "Function _identify_hotspots is too long (67 lines)"
+    },
+    {
+      "file": "/home/greenantix/AI/LLMdiver/aura/intelligence/self_analyzer.py",
+      "line": 930,
+      "level": "needs_improvement",
+      "type": "long_function",
+      "description": "Function generate_report is too long (135 lines)"
+    },
+    {
+      "file": "/home/greenantix/AI/LLMdiver/aura/intelligence/self_analyzer.py",
+      "line": 22,
+      "level": "needs_improvement",
+      "type": "missing_docstring",
+      "description": "Class missing docstring"
+    },
+    {
+      "file": "/home/greenantix/AI/LLMdiver/aura/intelligence/self_analyzer.py",
+      "line": 30,
+      "level": "needs_improvement",
+      "type": "missing_docstring",
+      "description": "Class missing docstring"
+    },
+    {
+      "file": "/home/greenantix/AI/LLMdiver/aura/intelligence/self_analyzer.py",
+      "line": 38,
+      "level": "needs_improvement",
+      "type": "missing_docstring",
+      "description": "Class missing docstring"
+    },
+    {
+      "file": "/home/greenantix/AI/LLMdiver/aura/intelligence/self_analyzer.py",
+      "line": 47,
+      "level": "needs_improvement",
+      "type": "missing_docstring",
+      "description": "Class missing docstring"
+    },
+    {
+      "file": "/home/greenantix/AI/LLMdiver/aura/intelligence/self_analyzer.py",
+      "line": 59,
+      "level": "needs_improvement",
+      "type": "missing_docstring",
+      "description": "Class missing docstring"
+    },
+    {
+      "file": "/home/greenantix/AI/LLMdiver/aura/intelligence/self_analyzer.py",
+      "line": 71,
+      "level": "needs_improvement",
+      "type": "missing_docstring",
+      "description": "Class missing docstring"
+    },
+    {
+      "file": "/home/greenantix/AI/LLMdiver/aura/intelligence/self_analyzer.py",
+      "line": 82,
+      "level": "needs_improvement",
+      "type": "missing_docstring",
+      "description": "Class missing docstring"
+    },
+    {
+      "file": "/home/greenantix/AI/LLMdiver/aura/intelligence/self_analyzer.py",
+      "line": 93,
+      "level": "needs_improvement",
+      "type": "missing_docstring",
+      "description": "Class missing docstring"
+    },
+    {
+      "file": "/home/greenantix/AI/LLMdiver/aura/intelligence/self_analyzer.py",
+      "line": 108,
+      "level": "needs_improvement",
+      "type": "missing_docstring",
+      "description": "Class missing docstring"
+    },
+    {
+      "file": "/home/greenantix/AI/LLMdiver/aura/intelligence/self_analyzer.py",
+      "line": 127,
+      "level": "needs_improvement",
+      "type": "missing_docstring",
+      "description": "Class missing docstring"
+    },
+    {
+      "file": "/home/greenantix/AI/LLMdiver/aura/intelligence/self_analyzer.py",
+      "line": 128,
+      "level": "needs_improvement",
+      "type": "missing_docstring",
+      "description": "Function missing docstring"
+    },
+    {
+      "file": "/home/greenantix/AI/LLMdiver/aura/intelligence/python_analyzer.py",
+      "line": 93,
+      "level": "needs_improvement",
+      "type": "long_function",
+      "description": "Function visit_FunctionDef is too long (51 lines)"
+    },
+    {
+      "file": "/home/greenantix/AI/LLMdiver/aura/intelligence/python_analyzer.py",
+      "line": 314,
+      "level": "needs_improvement",
+      "type": "long_function",
+      "description": "Function __init__ is too long (357 lines)"
+    },
+    {
+      "file": "/home/greenantix/AI/LLMdiver/aura/intelligence/python_analyzer.py",
+      "line": 49,
+      "level": "needs_improvement",
+      "type": "missing_docstring",
+      "description": "Function missing docstring"
+    },
+    {
+      "file": "/home/greenantix/AI/LLMdiver/aura/intelligence/python_analyzer.py",
+      "line": 84,
+      "level": "needs_improvement",
+      "type": "missing_docstring",
+      "description": "Function missing docstring"
+    },
+    {
+      "file": "/home/greenantix/AI/LLMdiver/aura/intelligence/python_analyzer.py",
+      "line": 282,
+      "level": "needs_improvement",
+      "type": "missing_docstring",
+      "description": "Function missing docstring"
+    },
+    {
+      "file": "/home/greenantix/AI/LLMdiver/aura/intelligence/python_analyzer.py",
+      "line": 314,
+      "level": "needs_improvement",
+      "type": "missing_docstring",
+      "description": "Function missing docstring"
+    },
+    {
+      "file": "/home/greenantix/AI/LLMdiver/aura/intelligence/go/ast_analyzer.py",
+      "line": 561,
+      "level": "needs_improvement",
+      "type": "long_function",
+      "description": "Function _calculate_function_complexity is too long (121 lines)"
+    },
+    {
+      "file": "/home/greenantix/AI/LLMdiver/aura/intelligence/go/ast_analyzer.py",
+      "line": 757,
+      "level": "needs_improvement",
+      "type": "long_function",
+      "description": "Function _extract_context_usage is too long (145 lines)"
+    },
+    {
+      "file": "/home/greenantix/AI/LLMdiver/aura/intelligence/go/ast_analyzer.py",
+      "line": 22,
+      "level": "needs_improvement",
+      "type": "missing_docstring",
+      "description": "Class missing docstring"
+    },
+    {
+      "file": "/home/greenantix/AI/LLMdiver/aura/intelligence/go/ast_analyzer.py",
+      "line": 41,
+      "level": "needs_improvement",
+      "type": "missing_docstring",
+      "description": "Class missing docstring"
+    },
+    {
+      "file": "/home/greenantix/AI/LLMdiver/aura/intelligence/go/ast_analyzer.py",
+      "line": 53,
+      "level": "needs_improvement",
+      "type": "missing_docstring",
+      "description": "Class missing docstring"
+    },
+    {
+      "file": "/home/greenantix/AI/LLMdiver/aura/intelligence/go/ast_analyzer.py",
+      "line": 65,
+      "level": "needs_improvement",
+      "type": "missing_docstring",
+      "description": "Class missing docstring"
+    },
+    {
+      "file": "/home/greenantix/AI/LLMdiver/aura/intelligence/go/ast_analyzer.py",
+      "line": 85,
+      "level": "needs_improvement",
+      "type": "missing_docstring",
+      "description": "Class missing docstring"
+    },
+    {
+      "file": "/home/greenantix/AI/LLMdiver/aura/intelligence/go/ast_analyzer.py",
+      "line": 97,
+      "level": "needs_improvement",
+      "type": "missing_docstring",
+      "description": "Class missing docstring"
+    },
+    {
+      "file": "/home/greenantix/AI/LLMdiver/aura/intelligence/go/ast_analyzer.py",
+      "line": 110,
+      "level": "needs_improvement",
+      "type": "missing_docstring",
+      "description": "Class missing docstring"
+    },
+    {
+      "file": "/home/greenantix/AI/LLMdiver/aura/intelligence/go/ast_analyzer.py",
+      "line": 123,
+      "level": "needs_improvement",
+      "type": "missing_docstring",
+      "description": "Class missing docstring"
+    },
+    {
+      "file": "/home/greenantix/AI/LLMdiver/aura/intelligence/go/ast_analyzer.py",
+      "line": 124,
+      "level": "needs_improvement",
+      "type": "missing_docstring",
+      "description": "Function missing docstring"
+    },
+    {
+      "file": "/home/greenantix/AI/LLMdiver/aura/intelligence/rust/memory_analyzer.py",
+      "line": 689,
+      "level": "needs_improvement",
+      "type": "long_function",
+      "description": "Function _calculate_function_complexity is too long (87 lines)"
+    },
+    {
+      "file": "/home/greenantix/AI/LLMdiver/aura/intelligence/rust/memory_analyzer.py",
+      "line": 996,
+      "level": "needs_improvement",
+      "type": "long_function",
+      "description": "Function _extract_transmute_calls is too long (71 lines)"
+    },
+    {
+      "file": "/home/greenantix/AI/LLMdiver/aura/intelligence/rust/memory_analyzer.py",
+      "line": 1067,
+      "level": "needs_improvement",
+      "type": "long_function",
+      "description": "Function _extract_macro_usage is too long (87 lines)"
+    },
+    {
+      "file": "/home/greenantix/AI/LLMdiver/aura/intelligence/rust/memory_analyzer.py",
+      "line": 21,
+      "level": "needs_improvement",
+      "type": "missing_docstring",
+      "description": "Class missing docstring"
+    },
+    {
+      "file": "/home/greenantix/AI/LLMdiver/aura/intelligence/rust/memory_analyzer.py",
+      "line": 36,
+      "level": "needs_improvement",
+      "type": "missing_docstring",
+      "description": "Class missing docstring"
+    },
+    {
+      "file": "/home/greenantix/AI/LLMdiver/aura/intelligence/rust/memory_analyzer.py",
+      "line": 48,
+      "level": "needs_improvement",
+      "type": "missing_docstring",
+      "description": "Class missing docstring"
+    },
+    {
+      "file": "/home/greenantix/AI/LLMdiver/aura/intelligence/rust/memory_analyzer.py",
+      "line": 56,
+      "level": "needs_improvement",
+      "type": "missing_docstring",
+      "description": "Class missing docstring"
+    },
+    {
+      "file": "/home/greenantix/AI/LLMdiver/aura/intelligence/rust/memory_analyzer.py",
+      "line": 68,
+      "level": "needs_improvement",
+      "type": "missing_docstring",
+      "description": "Class missing docstring"
+    },
+    {
+      "file": "/home/greenantix/AI/LLMdiver/aura/intelligence/rust/memory_analyzer.py",
+      "line": 79,
+      "level": "needs_improvement",
+      "type": "missing_docstring",
+      "description": "Class missing docstring"
+    },
+    {
+      "file": "/home/greenantix/AI/LLMdiver/aura/intelligence/rust/memory_analyzer.py",
+      "line": 90,
+      "level": "needs_improvement",
+      "type": "missing_docstring",
+      "description": "Class missing docstring"
+    },
+    {
+      "file": "/home/greenantix/AI/LLMdiver/aura/intelligence/rust/memory_analyzer.py",
+      "line": 114,
+      "level": "needs_improvement",
+      "type": "missing_docstring",
+      "description": "Class missing docstring"
+    },
+    {
+      "file": "/home/greenantix/AI/LLMdiver/aura/intelligence/rust/memory_analyzer.py",
+      "line": 127,
+      "level": "needs_improvement",
+      "type": "missing_docstring",
+      "description": "Class missing docstring"
+    },
+    {
+      "file": "/home/greenantix/AI/LLMdiver/aura/intelligence/rust/memory_analyzer.py",
+      "line": 140,
+      "level": "needs_improvement",
+      "type": "missing_docstring",
+      "description": "Class missing docstring"
+    },
+    {
+      "file": "/home/greenantix/AI/LLMdiver/aura/intelligence/rust/memory_analyzer.py",
+      "line": 151,
+      "level": "needs_improvement",
+      "type": "missing_docstring",
+      "description": "Class missing docstring"
+    },
+    {
+      "file": "/home/greenantix/AI/LLMdiver/aura/intelligence/rust/memory_analyzer.py",
+      "line": 167,
+      "level": "needs_improvement",
+      "type": "missing_docstring",
+      "description": "Class missing docstring"
+    },
+    {
+      "file": "/home/greenantix/AI/LLMdiver/aura/intelligence/rust/memory_analyzer.py",
+      "line": 168,
+      "level": "needs_improvement",
+      "type": "missing_docstring",
+      "description": "Function missing docstring"
+    },
+    {
+      "file": "/home/greenantix/AI/LLMdiver/aura/cli/aura_cli.py",
+      "line": 145,
+      "level": "needs_improvement",
+      "type": "long_function",
+      "description": "Function format_code_analysis is too long (58 lines)"
+    },
+    {
+      "file": "/home/greenantix/AI/LLMdiver/aura/cli/aura_cli.py",
+      "line": 41,
+      "level": "needs_improvement",
+      "type": "missing_docstring",
+      "description": "Function missing docstring"
+    },
+    {
+      "file": "/home/greenantix/AI/LLMdiver/aura/llm/providers.py",
+      "line": 80,
+      "level": "needs_improvement",
+      "type": "long_function",
+      "description": "Function _get_model_mappings is too long (53 lines)"
+    },
+    {
+      "file": "/home/greenantix/AI/LLMdiver/aura/llm/providers.py",
+      "line": 186,
+      "level": "needs_improvement",
+      "type": "long_function",
+      "description": "Function _detect_model_capability is too long (103 lines)"
+    },
+    {
+      "file": "/home/greenantix/AI/LLMdiver/aura/llm/providers.py",
+      "line": 292,
+      "level": "needs_improvement",
+      "type": "long_function",
+      "description": "Function _get_model_mappings is too long (137 lines)"
+    },
+    {
+      "file": "/home/greenantix/AI/LLMdiver/aura/llm/providers.py",
+      "line": 436,
+      "level": "needs_improvement",
+      "type": "long_function",
+      "description": "Function __init__ is too long (134 lines)"
+    },
+    {
+      "file": "/home/greenantix/AI/LLMdiver/aura/llm/providers.py",
+      "line": 46,
+      "level": "needs_improvement",
+      "type": "missing_docstring",
+      "description": "Function missing docstring"
+    },
+    {
+      "file": "/home/greenantix/AI/LLMdiver/aura/llm/providers.py",
+      "line": 63,
+      "level": "needs_improvement",
+      "type": "missing_docstring",
+      "description": "Function missing docstring"
+    },
+    {
+      "file": "/home/greenantix/AI/LLMdiver/aura/llm/providers.py",
+      "line": 71,
+      "level": "needs_improvement",
+      "type": "missing_docstring",
+      "description": "Function missing docstring"
+    },
+    {
+      "file": "/home/greenantix/AI/LLMdiver/aura/llm/providers.py",
+      "line": 436,
+      "level": "needs_improvement",
+      "type": "missing_docstring",
+      "description": "Function missing docstring"
+    },
+    {
+      "file": "/home/greenantix/AI/LLMdiver/aura/core/architecture.py",
+      "line": 94,
+      "level": "needs_improvement",
+      "type": "long_function",
+      "description": "Function _setup_logging is too long (122 lines)"
+    },
+    {
+      "file": "/home/greenantix/AI/LLMdiver/aura/core/architecture.py",
+      "line": 259,
+      "level": "needs_improvement",
+      "type": "long_function",
+      "description": "Function __init__ is too long (55 lines)"
+    },
+    {
+      "file": "/home/greenantix/AI/LLMdiver/aura/core/architecture.py",
+      "line": 76,
+      "level": "needs_improvement",
+      "type": "missing_docstring",
+      "description": "Function missing docstring"
+    },
+    {
+      "file": "/home/greenantix/AI/LLMdiver/aura/core/architecture.py",
+      "line": 259,
+      "level": "needs_improvement",
+      "type": "missing_docstring",
+      "description": "Function missing docstring"
+    },
+    {
+      "file": "/home/greenantix/AI/LLMdiver/aura/core/architecture.py",
+      "line": 341,
+      "level": "needs_improvement",
+      "type": "missing_docstring",
+      "description": "Function missing docstring"
+    },
+    {
+      "file": "/home/greenantix/AI/LLMdiver/aura/core/architecture.py",
+      "line": 401,
+      "level": "needs_improvement",
+      "type": "missing_docstring",
+      "description": "Function missing docstring"
+    },
+    {
+      "file": "/home/greenantix/AI/LLMdiver/aura/core/architecture.py",
+      "line": 409,
+      "level": "needs_improvement",
+      "type": "missing_docstring",
+      "description": "Function missing docstring"
+    },
+    {
+      "file": "/home/greenantix/AI/LLMdiver/aura/core/config.py",
+      "line": 84,
+      "level": "needs_improvement",
+      "type": "long_function",
+      "description": "Function load_config is too long (63 lines)"
+    },
+    {
+      "file": "/home/greenantix/AI/LLMdiver/aura/core/config.py",
+      "line": 16,
+      "level": "needs_improvement",
+      "type": "missing_docstring",
+      "description": "Class missing docstring"
+    },
+    {
+      "file": "/home/greenantix/AI/LLMdiver/aura/core/config.py",
+      "line": 27,
+      "level": "needs_improvement",
+      "type": "missing_docstring",
+      "description": "Class missing docstring"
+    },
+    {
+      "file": "/home/greenantix/AI/LLMdiver/aura/core/config.py",
+      "line": 37,
+      "level": "needs_improvement",
+      "type": "missing_docstring",
+      "description": "Class missing docstring"
+    },
+    {
+      "file": "/home/greenantix/AI/LLMdiver/aura/core/config.py",
+      "line": 46,
+      "level": "needs_improvement",
+      "type": "missing_docstring",
+      "description": "Class missing docstring"
+    },
+    {
+      "file": "/home/greenantix/AI/LLMdiver/aura/core/config.py",
+      "line": 54,
+      "level": "needs_improvement",
+      "type": "missing_docstring",
+      "description": "Class missing docstring"
+    },
+    {
+      "file": "/home/greenantix/AI/LLMdiver/aura/core/config.py",
+      "line": 62,
+      "level": "needs_improvement",
+      "type": "missing_docstring",
+      "description": "Class missing docstring"
+    },
+    {
+      "file": "/home/greenantix/AI/LLMdiver/aura/core/config.py",
+      "line": 63,
+      "level": "needs_improvement",
+      "type": "missing_docstring",
+      "description": "Function missing docstring"
+    },
+    {
+      "file": "/home/greenantix/AI/LLMdiver/aura/git/branching.py",
+      "line": 92,
+      "level": "needs_improvement",
+      "type": "long_function",
+      "description": "Function __init__ is too long (89 lines)"
+    },
+    {
+      "file": "/home/greenantix/AI/LLMdiver/aura/git/branching.py",
+      "line": 181,
+      "level": "needs_improvement",
+      "type": "long_function",
+      "description": "Function _is_git_repo is too long (51 lines)"
+    },
+    {
+      "file": "/home/greenantix/AI/LLMdiver/aura/git/branching.py",
+      "line": 282,
+      "level": "needs_improvement",
+      "type": "long_function",
+      "description": "Function _get_base_branch is too long (263 lines)"
+    },
+    {
+      "file": "/home/greenantix/AI/LLMdiver/aura/git/branching.py",
+      "line": 92,
+      "level": "needs_improvement",
+      "type": "missing_docstring",
+      "description": "Function missing docstring"
+    },
+    {
+      "file": "/home/greenantix/AI/LLMdiver/aura/git/semantic_commits.py",
+      "line": 241,
+      "level": "needs_improvement",
+      "type": "long_function",
+      "description": "Function get_branch_info is too long (53 lines)"
+    },
+    {
+      "file": "/home/greenantix/AI/LLMdiver/aura/git/semantic_commits.py",
+      "line": 345,
+      "level": "needs_improvement",
+      "type": "long_function",
+      "description": "Function __init__ is too long (169 lines)"
+    },
+    {
+      "file": "/home/greenantix/AI/LLMdiver/aura/git/semantic_commits.py",
+      "line": 101,
+      "level": "needs_improvement",
+      "type": "missing_docstring",
+      "description": "Function missing docstring"
+    },
+    {
+      "file": "/home/greenantix/AI/LLMdiver/aura/git/semantic_commits.py",
+      "line": 345,
+      "level": "needs_improvement",
+      "type": "missing_docstring",
+      "description": "Function missing docstring"
+    },
+    {
+      "file": "/home/greenantix/AI/LLMdiver/aura/git/merging.py",
+      "line": 101,
+      "level": "needs_improvement",
+      "type": "long_function",
+      "description": "Function __init__ is too long (341 lines)"
+    },
+    {
+      "file": "/home/greenantix/AI/LLMdiver/aura/git/merging.py",
+      "line": 442,
+      "level": "needs_improvement",
+      "type": "long_function",
+      "description": "Function _parse_conflict_markers is too long (89 lines)"
+    },
+    {
+      "file": "/home/greenantix/AI/LLMdiver/aura/git/merging.py",
+      "line": 617,
+      "level": "needs_improvement",
+      "type": "long_function",
+      "description": "Function _heuristic_resolve_conflict is too long (116 lines)"
+    },
+    {
+      "file": "/home/greenantix/AI/LLMdiver/aura/git/merging.py",
+      "line": 101,
+      "level": "needs_improvement",
+      "type": "missing_docstring",
+      "description": "Function missing docstring"
+    },
+    {
+      "file": "/home/greenantix/AI/LLMdiver/aura/git/pr_automation.py",
+      "line": 335,
+      "level": "needs_improvement",
+      "type": "long_function",
+      "description": "Function _analyze_commit_message is too long (63 lines)"
+    },
+    {
+      "file": "/home/greenantix/AI/LLMdiver/aura/git/pr_automation.py",
+      "line": 398,
+      "level": "needs_improvement",
+      "type": "long_function",
+      "description": "Function _determine_pr_template is too long (53 lines)"
+    },
+    {
+      "file": "/home/greenantix/AI/LLMdiver/aura/git/pr_automation.py",
+      "line": 24,
+      "level": "needs_improvement",
+      "type": "missing_docstring",
+      "description": "Class missing docstring"
+    },
+    {
+      "file": "/home/greenantix/AI/LLMdiver/aura/git/pr_automation.py",
+      "line": 30,
+      "level": "needs_improvement",
+      "type": "missing_docstring",
+      "description": "Class missing docstring"
+    },
+    {
+      "file": "/home/greenantix/AI/LLMdiver/aura/git/pr_automation.py",
+      "line": 40,
+      "level": "needs_improvement",
+      "type": "missing_docstring",
+      "description": "Class missing docstring"
+    },
+    {
+      "file": "/home/greenantix/AI/LLMdiver/aura/git/pr_automation.py",
+      "line": 53,
+      "level": "needs_improvement",
+      "type": "missing_docstring",
+      "description": "Class missing docstring"
+    },
+    {
+      "file": "/home/greenantix/AI/LLMdiver/aura/git/pr_automation.py",
+      "line": 67,
+      "level": "needs_improvement",
+      "type": "missing_docstring",
+      "description": "Class missing docstring"
+    },
+    {
+      "file": "/home/greenantix/AI/LLMdiver/aura/git/pr_automation.py",
+      "line": 76,
+      "level": "needs_improvement",
+      "type": "missing_docstring",
+      "description": "Class missing docstring"
+    },
+    {
+      "file": "/home/greenantix/AI/LLMdiver/aura/git/pr_automation.py",
+      "line": 77,
+      "level": "needs_improvement",
+      "type": "missing_docstring",
+      "description": "Function missing docstring"
+    }
+  ],
+  "recommendations": [
+    "\ud83d\udd34 Address 14 high-severity security issues",
+    "\ud83c\udfd7\ufe0f Reduce coupling between tightly-coupled modules",
+    "\ud83d\udccf Break down large modules to improve single responsibility",
+    "\u2705 Performance: Code is generally well-optimized"
+  ]
+}

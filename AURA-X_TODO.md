@@ -10,7 +10,11 @@ Priority 1: System Resilience & Continuity (aura_watchdog.sh)
 
 [x] Implement Re-awakening Scheduler: Integrate with the system's at command to schedule a one-time execution of Aura-9's main script at the parsed reset time.
 
-[ ] Test and Deploy: Run a dry run of the watchdog script to ensure it correctly parses a simulated error message and schedules a test command.
+[ ] Test and Deploy:
+
+[x] Fix Execution Permissions: The script requires execute permissions. This can be resolved by running: chmod +x ./aura_watchdog.sh
+
+[ ] Run Dry Run Test: Execute the script with a simulated error message to verify parsing and scheduling logic.
 
 Priority 2: Knowledge Assimilation
 [x] Read PRD.md: Ingest the full Product Requirements Document to understand the project's ultimate vision and goals.

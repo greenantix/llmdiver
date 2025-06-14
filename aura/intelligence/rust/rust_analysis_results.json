@@ -1,0 +1,48 @@
+{
+  "timestamp": "2025-06-14T05:52:55.818200",
+  "files_analyzed": 5,
+  "total_constructs": 97,
+  "total_functions": 67,
+  "total_structs": 17,
+  "total_traits": 0,
+  "ownership_summary": {
+    "total_owned": 32,
+    "total_borrowed": 66,
+    "total_cloned": 2,
+    "avg_memory_efficiency": 0.8
+  },
+  "concurrency_summary": {
+    "total_async_functions": 8,
+    "files_with_concurrency": 1,
+    "avg_thread_safety_score": 0.85
+  },
+  "memory_safety_summary": {
+    "total_unsafe_blocks": 11,
+    "total_raw_pointers": 9,
+    "avg_safety_score": 0.95,
+    "ffi_interactions": 1
+  },
+  "performance_summary": {
+    "total_flags": 15,
+    "unique_flags": [
+      "heap_allocation",
+      "inefficient_string_ops",
+      "unnecessary_clone"
+    ]
+  },
+  "complexity_summary": {
+    "avg_function_complexity": 0.09313432835820899,
+    "high_complexity_functions": 0
+  },
+  "recommendations_summary": {
+    "total_recommendations": 6,
+    "common_recommendations": [
+      "Eliminate unnecessary clone() calls",
+      "Use String::push_str() or format! macro for string concatenation",
+      "Review unsafe blocks and document safety invariants",
+      "Use String::push_str() or format! macro for string concatenation",
+      "Eliminate unnecessary clone() calls",
+      "Use String::push_str() or format! macro for string concatenation"
+    ]
+  }
+}

@@ -1,0 +1,37 @@
+{
+  "timestamp": "2025-06-14T05:46:22.419754",
+  "files_analyzed": 4,
+  "total_constructs": 44,
+  "total_functions": 6,
+  "total_methods": 23,
+  "total_structs": 9,
+  "total_interfaces": 2,
+  "concurrency_summary": {
+    "total_goroutines": 4,
+    "files_with_concurrency": 3,
+    "unique_patterns": []
+  },
+  "performance_summary": {
+    "total_flags": 15,
+    "unique_flags": [
+      "string_concatenation",
+      "unbuffered_channel",
+      "reflection_overuse"
+    ]
+  },
+  "complexity_summary": {
+    "average_function_complexity": 0.17931034482758618,
+    "high_complexity_functions": 1
+  },
+  "recommendations_summary": {
+    "total_recommendations": 6,
+    "common_recommendations": [
+      "Consider using buffered channels to prevent goroutine blocking",
+      "Use strings.Builder for efficient string concatenation in loops",
+      "Consider using context.Context for goroutine cancellation and timeout handling",
+      "Use strings.Builder for efficient string concatenation in loops",
+      "Refactor 1 high-complexity functions for better maintainability",
+      "Use strings.Builder for efficient string concatenation in loops"
+    ]
+  }
+}

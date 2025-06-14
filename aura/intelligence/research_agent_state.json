@@ -1,0 +1,233 @@
+{
+  "research_history": [
+    {
+      "query_id": "security-scan-daily",
+      "source_url": "https://github.com/example/advisory",
+      "title": "Remote Code Execution in Popular Python Library",
+      "summary": "Security advisory: HIGH severity",
+      "content": "A critical vulnerability allowing remote code execution through unsafe deserialization",
+      "relevance_score": 0.9,
+      "confidence_score": 0.95,
+      "tags": [
+        "security",
+        "vulnerability",
+        "high"
+      ],
+      "discovered_at": "2025-06-14T06:00:34.056273",
+      "metadata": {
+        "cve_id": "CVE-2024-001",
+        "affected_packages": [
+          "vulnerable-lib"
+        ]
+      }
+    },
+    {
+      "query_id": "security-scan-daily",
+      "source_url": "https://github.com/example/security",
+      "title": "Information Disclosure in Web Framework",
+      "summary": "Security advisory: MEDIUM severity",
+      "content": "Sensitive information may be leaked through error messages",
+      "relevance_score": 0.9,
+      "confidence_score": 0.95,
+      "tags": [
+        "security",
+        "vulnerability",
+        "medium"
+      ],
+      "discovered_at": "2025-06-14T06:00:34.056294",
+      "metadata": {
+        "cve_id": null,
+        "affected_packages": [
+          "web-framework"
+        ]
+      }
+    },
+    {
+      "query_id": "library-discovery-weekly",
+      "source_url": "https://github.com/example/aura-ai",
+      "title": "Library Analysis: aura-ai",
+      "summary": "Analysis of aura-ai - Advanced AI agent framework for autonomous development",
+      "content": "{\n  \"message\": \"Mock response\"\n}",
+      "relevance_score": 0.95,
+      "confidence_score": 0.85,
+      "tags": [
+        "library",
+        "discovery",
+        "AI agents",
+        "automation",
+        "code analysis"
+      ],
+      "discovered_at": "2025-06-14T06:00:34.056351",
+      "metadata": {
+        "version": "1.0.0",
+        "compatibility": {
+          "python": ">=3.8",
+          "frameworks": [
+            "asyncio",
+            "aiohttp"
+          ]
+        }
+      }
+    },
+    {
+      "query_id": "library-discovery-weekly",
+      "source_url": "https://github.com/example/fastmemory",
+      "title": "Library Analysis: fastmemory",
+      "summary": "Analysis of fastmemory - High-performance memory management for Python applications",
+      "content": "{\n  \"message\": \"Mock response\"\n}",
+      "relevance_score": 0.78,
+      "confidence_score": 0.85,
+      "tags": [
+        "library",
+        "discovery",
+        "data processing",
+        "scientific computing",
+        "performance optimization"
+      ],
+      "discovered_at": "2025-06-14T06:00:34.056376",
+      "metadata": {
+        "version": "2.1.0",
+        "compatibility": {
+          "python": ">=3.9",
+          "frameworks": [
+            "numpy",
+            "pandas"
+          ]
+        }
+      }
+    },
+    {
+      "query_id": "architecture-patterns-monthly",
+      "source_url": null,
+      "title": "Architecture Pattern: Event-Driven Microservices",
+      "summary": "Analysis of Event-Driven Microservices pattern in Distributed Systems",
+      "content": "{\n  \"complexity_analysis\": {\n    \"overall_score\": 0.75,\n    \"factors\": {\n      \"technical_complexity\": 0.8,\n      \"integration_complexity\": 0.7,\n      \"domain_complexity\": 0.6\n    }\n  },\n  \"timeline_estimation\": {\n    \"phase_1\": 90,\n    \"phase_2\": 60,\n    \"phase_3\": 90,\n    \"total_days\": 240\n  },\n  \"risk_factors\": [\n    \"LLM API integration complexity\",\n    \"Multi-language AST parsing challenges\"\n  ]\n}",
+      "relevance_score": 0.8,
+      "confidence_score": 0.9,
+      "tags": [
+        "architecture",
+        "pattern",
+        "distributed systems"
+      ],
+      "discovered_at": "2025-06-14T06:00:34.056442",
+      "metadata": {
+        "complexity": "advanced",
+        "category": "Distributed Systems"
+      }
+    },
+    {
+      "query_id": "architecture-patterns-monthly",
+      "source_url": null,
+      "title": "Architecture Pattern: AI-First Architecture",
+      "summary": "Analysis of AI-First Architecture pattern in Artificial Intelligence",
+      "content": "{\n  \"complexity_analysis\": {\n    \"overall_score\": 0.75,\n    \"factors\": {\n      \"technical_complexity\": 0.8,\n      \"integration_complexity\": 0.7,\n      \"domain_complexity\": 0.6\n    }\n  },\n  \"timeline_estimation\": {\n    \"phase_1\": 90,\n    \"phase_2\": 60,\n    \"phase_3\": 90,\n    \"total_days\": 240\n  },\n  \"risk_factors\": [\n    \"LLM API integration complexity\",\n    \"Multi-language AST parsing challenges\"\n  ]\n}",
+      "relevance_score": 0.8,
+      "confidence_score": 0.9,
+      "tags": [
+        "architecture",
+        "pattern",
+        "artificial intelligence"
+      ],
+      "discovered_at": "2025-06-14T06:00:34.056477",
+      "metadata": {
+        "complexity": "expert",
+        "category": "Artificial Intelligence"
+      }
+    }
+  ],
+  "knowledge_base": {
+    "security_advisory_CVE-2024-001": {
+      "advisory": "SecurityAdvisory(id='CVE-2024-001', severity='HIGH', title='Remote Code Execution in Popular Python Library', description='A critical vulnerability allowing remote code execution through unsafe deserialization', affected_packages=['vulnerable-lib'], affected_versions=['< 2.1.0'], fixed_versions=['2.1.0'], published_date=datetime.datetime(2025, 6, 14, 6, 0, 34, 56181), cve_id='CVE-2024-001', references=['https://github.com/example/advisory'])",
+      "analysis": {
+        "message": "Mock response"
+      },
+      "processed_at": "2025-06-14T06:00:34.056253"
+    },
+    "security_advisory_GHSA-2024-001": {
+      "advisory": "SecurityAdvisory(id='GHSA-2024-001', severity='MEDIUM', title='Information Disclosure in Web Framework', description='Sensitive information may be leaked through error messages', affected_packages=['web-framework'], affected_versions=['1.0.0 - 1.2.3'], fixed_versions=['1.2.4'], published_date=datetime.datetime(2025, 6, 14, 6, 0, 34, 56187), cve_id=None, references=['https://github.com/example/security'])",
+      "analysis": {
+        "message": "Mock response"
+      },
+      "processed_at": "2025-06-14T06:00:34.056291"
+    },
+    "library_aura-ai": {
+      "library": "LibraryInfo(name='aura-ai', version='1.0.0', description='Advanced AI agent framework for autonomous development', github_url='https://github.com/example/aura-ai', documentation_url='https://aura-ai.readthedocs.io', popularity_score=0.95, maintenance_score=0.92, security_score=0.88, compatibility={'python': '>=3.8', 'frameworks': ['asyncio', 'aiohttp']}, use_cases=['AI agents', 'automation', 'code analysis'], alternatives=[])",
+      "analysis": {
+        "message": "Mock response"
+      },
+      "discovered_at": "2025-06-14T06:00:34.056327"
+    },
+    "library_fastmemory": {
+      "library": "LibraryInfo(name='fastmemory', version='2.1.0', description='High-performance memory management for Python applications', github_url='https://github.com/example/fastmemory', documentation_url='https://fastmemory.dev', popularity_score=0.78, maintenance_score=0.85, security_score=0.91, compatibility={'python': '>=3.9', 'frameworks': ['numpy', 'pandas']}, use_cases=['data processing', 'scientific computing', 'performance optimization'], alternatives=[])",
+      "analysis": {
+        "message": "Mock response"
+      },
+      "discovered_at": "2025-06-14T06:00:34.056367"
+    },
+    "pattern_event-driven_microservices": {
+      "pattern": "ArchitecturePattern(name='Event-Driven Microservices', category='Distributed Systems', description='Microservices architecture using event-driven communication', use_cases=['Scalable web applications', 'Real-time data processing', 'IoT systems'], advantages=['Loose coupling', 'Scalability', 'Fault tolerance'], disadvantages=['Complexity', 'Eventual consistency challenges', 'Debugging difficulty'], implementation_examples=['Event sourcing', 'CQRS', 'Message queues'], related_patterns=['CQRS', 'Event Sourcing', 'Saga Pattern'], complexity_level='advanced')",
+      "analysis": {
+        "complexity_analysis": {
+          "overall_score": 0.75,
+          "factors": {
+            "technical_complexity": 0.8,
+            "integration_complexity": 0.7,
+            "domain_complexity": 0.6
+          }
+        },
+        "timeline_estimation": {
+          "phase_1": 90,
+          "phase_2": 60,
+          "phase_3": 90,
+          "total_days": 240
+        },
+        "risk_factors": [
+          "LLM API integration complexity",
+          "Multi-language AST parsing challenges"
+        ]
+      },
+      "researched_at": "2025-06-14T06:00:34.056413"
+    },
+    "pattern_ai-first_architecture": {
+      "pattern": "ArchitecturePattern(name='AI-First Architecture', category='Artificial Intelligence', description='Architecture pattern that integrates AI as a core component', use_cases=['Intelligent applications', 'Adaptive systems', 'Autonomous agents'], advantages=['Intelligent behavior', 'Adaptability', 'Automation'], disadvantages=['Resource intensive', 'Unpredictability', 'Model dependencies'], implementation_examples=['LLM integration', 'ML pipelines', 'Agent frameworks'], related_patterns=['Microservices', 'Event-Driven', 'Pipe and Filter'], complexity_level='expert')",
+      "analysis": {
+        "complexity_analysis": {
+          "overall_score": 0.75,
+          "factors": {
+            "technical_complexity": 0.8,
+            "integration_complexity": 0.7,
+            "domain_complexity": 0.6
+          }
+        },
+        "timeline_estimation": {
+          "phase_1": 90,
+          "phase_2": 60,
+          "phase_3": 90,
+          "total_days": 240
+        },
+        "risk_factors": [
+          "LLM API integration complexity",
+          "Multi-language AST parsing challenges"
+        ]
+      },
+      "researched_at": "2025-06-14T06:00:34.056461"
+    },
+    "insight_emerging_trends_2025-06-14T06:00:34.056518": {
+      "type": "emerging_trends",
+      "content": [],
+      "generated_at": "2025-06-14T06:00:34.056512"
+    },
+    "insight_actionable_insights_2025-06-14T06:00:34.056518": {
+      "type": "actionable_insights",
+      "content": [],
+      "generated_at": "2025-06-14T06:00:34.056513"
+    },
+    "insight_innovation_opportunities_2025-06-14T06:00:34.056518": {
+      "type": "innovation_opportunities",
+      "content": [],
+      "generated_at": "2025-06-14T06:00:34.056514"
+    }
+  },
+  "last_scan_times": {},
+  "saved_at": "2025-06-14T06:00:34.056628"
+}
