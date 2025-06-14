@@ -1,0 +1,138 @@
+{
+  "total_tasks": 5,
+  "root_tasks": 6,
+  "execution_order": [
+    "epic_1_1",
+    "story_arch_1",
+    "task_zmq_setup",
+    "task_message_routing",
+    "spike_zmq_patterns"
+  ],
+  "parallel_groups": [],
+  "critical_path": [
+    "epic_1_1",
+    "epic_1_2"
+  ],
+  "total_estimate": {
+    "value": 68,
+    "unit": "days",
+    "confidence": 0.7
+  },
+  "milestone_mapping": {
+    "Phase: foundation": [
+      "epic_1_1",
+      "story_arch_1",
+      "spike_zmq_patterns"
+    ],
+    "Phase: automation": [
+      "epic_1_1",
+      "story_arch_1",
+      "spike_zmq_patterns"
+    ],
+    "Phase: advanced": [
+      "epic_1_1",
+      "story_arch_1",
+      "spike_zmq_patterns"
+    ],
+    "Phase: release": [
+      "epic_1_1",
+      "story_arch_1",
+      "spike_zmq_patterns"
+    ]
+  },
+  "dependency_graph": {
+    "edges_count": 1,
+    "critical_path_length": 2,
+    "parallel_groups_count": 1,
+    "estimated_duration_days": 30,
+    "optimization_suggestions_count": 2
+  },
+  "sample_tasks": [
+    {
+      "id": "epic_1_1",
+      "title": "Core System Architecture",
+      "type": "epic",
+      "priority": "critical",
+      "status": "backlog",
+      "estimate": null,
+      "dependencies_count": 0,
+      "acceptance_criteria_count": 0,
+      "labels": [
+        "automation"
+      ]
+    },
+    {
+      "id": "story_arch_1",
+      "title": "As a developer, I want a message bus so that modules can communicate",
+      "type": "story",
+      "priority": "high",
+      "status": "backlog",
+      "estimate": {
+        "value": 5,
+        "unit": "story_points",
+        "confidence": 0.8
+      },
+      "dependencies_count": 0,
+      "acceptance_criteria_count": 1,
+      "labels": [
+        "story"
+      ]
+    },
+    {
+      "id": "task_zmq_setup",
+      "title": "Set up ZeroMQ infrastructure",
+      "type": "task",
+      "priority": "high",
+      "status": "backlog",
+      "estimate": {
+        "value": 2,
+        "unit": "days",
+        "confidence": 0.9
+      },
+      "dependencies_count": 0,
+      "acceptance_criteria_count": 0,
+      "labels": [
+        "backend",
+        "infrastructure",
+        "zmq"
+      ]
+    },
+    {
+      "id": "task_message_routing",
+      "title": "Implement message routing logic",
+      "type": "task",
+      "priority": "high",
+      "status": "backlog",
+      "estimate": {
+        "value": 3,
+        "unit": "days",
+        "confidence": 0.8
+      },
+      "dependencies_count": 1,
+      "acceptance_criteria_count": 0,
+      "labels": [
+        "backend",
+        "messaging",
+        "routing"
+      ]
+    },
+    {
+      "id": "spike_zmq_patterns",
+      "title": "Research ZeroMQ message patterns",
+      "type": "spike",
+      "priority": "high",
+      "status": "backlog",
+      "estimate": {
+        "value": 1,
+        "unit": "days",
+        "confidence": 0.7
+      },
+      "dependencies_count": 0,
+      "acceptance_criteria_count": 0,
+      "labels": [
+        "research",
+        "spike"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,59 @@
+{
+  "message_bus": {
+    "frontend_port": 5559,
+    "backend_port": 5560,
+    "heartbeat_interval": 30,
+    "timeout": 5000
+  },
+  "modules": {
+    "code_intelligence": {
+      "port": 5561,
+      "bind_address": "tcp://*:5561",
+      "log_level": "INFO",
+      "max_concurrent_analyses": 10,
+      "indexing_batch_size": 100
+    },
+    "llm_provider": {
+      "port": 5562,
+      "bind_address": "tcp://*:5562", 
+      "log_level": "INFO",
+      "default_provider": "lm_studio",
+      "timeout": 30000,
+      "retry_attempts": 3
+    },
+    "git_maintenance": {
+      "port": 5563,
+      "bind_address": "tcp://*:5563",
+      "log_level": "INFO",
+      "auto_commit": false,
+      "branch_strategy": "gitflow"
+    },
+    "cli": {
+      "port": 5564,
+      "bind_address": "tcp://*:5564",
+      "log_level": "INFO",
+      "command_timeout": 60000
+    }
+  },
+  "logging": {
+    "level": "INFO",
+    "format": "%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+    "file": "logs/aura.log",
+    "max_size": "10MB",
+    "backup_count": 5
+  },
+  "monitoring": {
+    "health_check_interval": 60,
+    "metrics_retention_days": 30,
+    "performance_profiling": false
+  },
+  "security": {
+    "sandboxing_enabled": true,
+    "resource_limits": {
+      "max_memory_mb": 2048,
+      "max_cpu_percent": 10
+    },
+    "allowed_file_extensions": [".py", ".js", ".ts", ".json", ".md", ".txt"],
+    "restricted_directories": ["/etc", "/var", "/usr/bin"]
+  }
+}
